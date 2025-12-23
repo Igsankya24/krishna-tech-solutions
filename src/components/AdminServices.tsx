@@ -216,16 +216,20 @@ const AdminServices = () => {
 
   const handleToggleVisibility = async (service: Service) => {
     try {
+      const newStatus = !service.is_active;
       const { error } = await supabase
         .from("services")
-        .update({ is_active: !service.is_active })
+        .update({ is_active: newStatus })
         .eq("id", service.id);
 
       if (error) throw error;
 
-      toast.success(
-        service.is_active ? "Service hidden from website" : "Service visible on website"
-      );
+      // Update local state immediately for instant feedback
+      setServices(prev => prev.map(s => 
+        s.id === service.id ? { ...s, is_active: newStatus } : s
+      ));
+
+      toast.success(newStatus ? "Service visible" : "Service hidden");
     } catch (error) {
       console.error("Error toggling service:", error);
       toast.error("Failed to update service");
