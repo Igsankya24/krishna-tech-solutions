@@ -60,7 +60,7 @@ const Contact = () => {
     {
       icon: MapPin,
       title: "Address",
-      details: ["123 Tech Street", "City Center, India 123456"],
+      details: ["Belgaum, Karnataka", "590014"],
     },
     {
       icon: Clock,
@@ -264,10 +264,10 @@ const Contact = () => {
                 <div className="text-center">
                   <MapPin className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
                   <p className="text-muted-foreground">
-                    123 Tech Street, City Center
+                    Belgaum, Karnataka - 590014
                   </p>
                   <a
-                    href="https://maps.google.com"
+                    href="https://maps.google.com/?q=Belgaum+Karnataka+590014"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-primary hover:underline text-sm"
