@@ -109,9 +109,8 @@ const BookingCalendar = ({ onBookingComplete, onClose }: BookingCalendarProps) =
       status: "pending"
     });
 
-    setIsLoading(false);
-
     if (error) {
+      setIsLoading(false);
       if (error.code === "23505") {
         toast({
           title: "Slot Unavailable",
@@ -130,6 +129,25 @@ const BookingCalendar = ({ onBookingComplete, onClose }: BookingCalendarProps) =
       return;
     }
 
+    // Send email notification
+    try {
+      await supabase.functions.invoke("send-booking-notification", {
+        body: {
+          customerName: formData.name,
+          customerEmail: formData.email,
+          customerPhone: formData.phone || undefined,
+          appointmentDate: format(selectedDate, "EEEE, MMMM d, yyyy"),
+          appointmentTime: selectedTime,
+          serviceType: formData.service || undefined,
+        },
+      });
+      console.log("Email notification sent successfully");
+    } catch (emailError) {
+      console.error("Failed to send email notification:", emailError);
+      // Don't fail the booking if email fails
+    }
+
+    setIsLoading(false);
     setStep("success");
     toast({
       title: "Appointment Booked!",
