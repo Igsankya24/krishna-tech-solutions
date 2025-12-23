@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+const ADMIN_EMAIL = Deno.env.get("ADMIN_EMAIL") || "bgmghost.ig@gmail.com";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -44,7 +45,7 @@ const handler = async (req: Request): Promise<Response> => {
       },
       body: JSON.stringify({
         from: "Krishna Tech Solutions <onboarding@resend.dev>",
-        to: ["bgmghost.ig@gmail.com"],
+        to: [ADMIN_EMAIL],
         subject: `New Appointment Booking - ${customerName}`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">

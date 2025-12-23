@@ -3,7 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 const TWILIO_ACCOUNT_SID = Deno.env.get("TWILIO_ACCOUNT_SID");
 const TWILIO_AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN");
 const TWILIO_PHONE_NUMBER = Deno.env.get("TWILIO_PHONE_NUMBER");
-const ADMIN_PHONE_NUMBER = "+917026292525";
+const ADMIN_PHONE = Deno.env.get("ADMIN_PHONE_NUMBER") || "+917026292525";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -41,7 +41,7 @@ const handler = async (req: Request): Promise<Response> => {
     const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
     
     const formData = new URLSearchParams();
-    formData.append("To", ADMIN_PHONE_NUMBER);
+    formData.append("To", ADMIN_PHONE);
     formData.append("From", TWILIO_PHONE_NUMBER!);
     formData.append("Body", message);
 
