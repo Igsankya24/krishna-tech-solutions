@@ -11,16 +11,17 @@ import { toast } from "sonner";
 import { Settings, Bell, Globe, Shield, Palette, Copyright, FileText, User, Camera, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { useMaintenanceMode } from "@/hooks/useMaintenanceMode";
 
 const AdminSettings = () => {
   const { user } = useAuth();
+  const { isMaintenanceMode, setMaintenanceMode: setMaintenanceModeGlobal } = useMaintenanceMode();
   const [siteName, setSiteName] = useState("Krishna Tech Solutions");
   const [siteEmail, setSiteEmail] = useState("info@krishnatech.com");
   const [sitePhone, setSitePhone] = useState("+91 12345 67890");
   const [copyrightText, setCopyrightText] = useState("© 2024 Krishna Tech Solutions. All rights reserved.");
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [smsNotifications, setSmsNotifications] = useState(false);
-  const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [showTerms, setShowTerms] = useState(true);
   const [termsContent, setTermsContent] = useState(
     "Welcome to Krishna Tech Solutions. By using our services, you agree to these terms and conditions. We reserve the right to modify these terms at any time."
@@ -326,14 +327,21 @@ const AdminSettings = () => {
               </div>
               <Switch
                 id="maintenance"
-                checked={maintenanceMode}
-                onCheckedChange={setMaintenanceMode}
+                checked={isMaintenanceMode}
+                onCheckedChange={async (checked) => {
+                  try {
+                    await setMaintenanceModeGlobal(checked);
+                    toast.success(checked ? "Maintenance mode enabled" : "Maintenance mode disabled");
+                  } catch {
+                    toast.error("Failed to update maintenance mode");
+                  }
+                }}
               />
             </div>
-            {maintenanceMode && (
+            {isMaintenanceMode && (
               <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
                 <p className="text-sm text-yellow-700">
-                  Site is currently in maintenance mode
+                  Site is currently in maintenance mode. Public pages will show a maintenance message.
                 </p>
               </div>
             )}
