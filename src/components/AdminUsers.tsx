@@ -48,7 +48,7 @@ interface Profile {
 
 interface UserRole {
   user_id: string;
-  role: "admin" | "user";
+  role: "admin" | "user" | "super_admin";
 }
 
 type PermissionType = "read" | "write" | "change_password" | "manage_appointments" | "manage_services";
@@ -68,7 +68,7 @@ interface Session {
 }
 
 interface UserWithRole extends Profile {
-  role: "admin" | "user";
+  role: "admin" | "user" | "super_admin";
   permissions: PermissionType[];
 }
 
@@ -165,7 +165,7 @@ const AdminUsers = () => {
       }
 
       // Merge profiles with roles and permissions
-      const rolesMap = new Map<string, "admin" | "user">();
+      const rolesMap = new Map<string, "admin" | "user" | "super_admin">();
       roles?.forEach((r: UserRole) => rolesMap.set(r.user_id, r.role));
 
       const permissionsMap = new Map<string, PermissionType[]>();
@@ -498,7 +498,12 @@ const AdminUsers = () => {
                     </div>
                   </TableCell>
                   <TableCell>
-                    {user.role === "admin" ? (
+                    {user.role === "super_admin" ? (
+                      <Badge className="bg-gradient-to-r from-amber-500 to-orange-500">
+                        <Shield className="w-3 h-3 mr-1" />
+                        Super Admin
+                      </Badge>
+                    ) : user.role === "admin" ? (
                       <Badge className="bg-primary">
                         <Shield className="w-3 h-3 mr-1" />
                         Admin
