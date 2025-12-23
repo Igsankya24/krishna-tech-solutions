@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
   Monitor,
@@ -13,15 +14,50 @@ import {
   BarChart3,
   Shield,
   ArrowLeft,
+  RefreshCw,
 } from "lucide-react";
 import AdminAppointments from "@/components/AdminAppointments";
+import AdminUsers from "@/components/AdminUsers";
 
-type AdminView = "dashboard" | "appointments";
+type AdminView = "dashboard" | "appointments" | "users";
+
+interface Stats {
+  totalUsers: number;
+  totalAppointments: number;
+  pendingAppointments: number;
+}
 
 const Admin = () => {
   const [currentView, setCurrentView] = useState<AdminView>("dashboard");
+  const [stats, setStats] = useState<Stats>({ totalUsers: 0, totalAppointments: 0, pendingAppointments: 0 });
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const navigate = useNavigate();
   const { user, isAdmin, isLoading, signOut } = useAuth();
+
+  const fetchStats = useCallback(async () => {
+    try {
+      // Fetch user count
+      const { count: userCount } = await supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true });
+
+      // Fetch appointment stats
+      const { data: appointments } = await supabase
+        .from("appointments")
+        .select("status");
+
+      const totalAppointments = appointments?.length || 0;
+      const pendingAppointments = appointments?.filter((a) => a.status === "pending").length || 0;
+
+      setStats({
+        totalUsers: userCount || 0,
+        totalAppointments,
+        pendingAppointments,
+      });
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+    }
+  }, []);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -29,9 +65,48 @@ const Admin = () => {
     }
   }, [user, isLoading, navigate]);
 
+  // Fetch stats on login/mount
+  useEffect(() => {
+    if (user) {
+      fetchStats();
+    }
+  }, [user, fetchStats]);
+
+  // Real-time updates for stats
+  useEffect(() => {
+    const appointmentsChannel = supabase
+      .channel("admin-appointments-stats")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "appointments" },
+        () => fetchStats()
+      )
+      .subscribe();
+
+    const profilesChannel = supabase
+      .channel("admin-profiles-stats")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "profiles" },
+        () => fetchStats()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(appointmentsChannel);
+      supabase.removeChannel(profilesChannel);
+    };
+  }, [fetchStats]);
+
   const handleSignOut = async () => {
     await signOut();
     navigate("/");
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchStats();
+    setIsRefreshing(false);
   };
 
   if (isLoading) {
@@ -68,9 +143,10 @@ const Admin = () => {
     },
     {
       icon: Users,
-      title: "Customers",
-      description: "View customer database",
+      title: "Users",
+      description: "View registered users",
       color: "from-orange-500 to-orange-600",
+      view: "users" as AdminView,
     },
     {
       icon: Settings,
@@ -100,6 +176,14 @@ const Admin = () => {
 
             {/* User Info & Actions */}
             <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+              >
+                <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
+              </Button>
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-medium text-foreground">
                   {user.email}
@@ -176,24 +260,32 @@ const Admin = () => {
               ))}
             </div>
 
-            {/* Quick Stats */}
+            {/* Quick Stats - Now with real data */}
             <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[
-                { label: "Total Visitors", value: "1,234" },
-                { label: "New Messages", value: "12" },
-                { label: "Appointments", value: "8" },
-                { label: "Active Users", value: "45" },
-              ].map((stat, idx) => (
-                <div
-                  key={idx}
-                  className="bg-card rounded-xl p-4 border border-border text-center"
-                >
-                  <p className="font-display text-2xl font-bold gradient-text">
-                    {stat.value}
-                  </p>
-                  <p className="text-sm text-muted-foreground">{stat.label}</p>
-                </div>
-              ))}
+              <div className="bg-card rounded-xl p-4 border border-border text-center">
+                <p className="font-display text-2xl font-bold gradient-text">
+                  {stats.totalUsers}
+                </p>
+                <p className="text-sm text-muted-foreground">Total Users</p>
+              </div>
+              <div className="bg-card rounded-xl p-4 border border-border text-center">
+                <p className="font-display text-2xl font-bold gradient-text">
+                  {stats.totalAppointments}
+                </p>
+                <p className="text-sm text-muted-foreground">Appointments</p>
+              </div>
+              <div className="bg-card rounded-xl p-4 border border-border text-center">
+                <p className="font-display text-2xl font-bold gradient-text">
+                  {stats.pendingAppointments}
+                </p>
+                <p className="text-sm text-muted-foreground">Pending</p>
+              </div>
+              <div className="bg-card rounded-xl p-4 border border-border text-center">
+                <p className="font-display text-2xl font-bold gradient-text">
+                  {isAdmin ? "Active" : "Limited"}
+                </p>
+                <p className="text-sm text-muted-foreground">Your Access</p>
+              </div>
             </div>
           </>
         ) : currentView === "appointments" ? (
@@ -208,6 +300,19 @@ const Admin = () => {
               Back to Dashboard
             </Button>
             <AdminAppointments />
+          </div>
+        ) : currentView === "users" ? (
+          <div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setCurrentView("dashboard")}
+              className="mb-4"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Dashboard
+            </Button>
+            <AdminUsers />
           </div>
         ) : null}
       </main>
