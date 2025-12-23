@@ -174,11 +174,25 @@ const BookingCalendar = ({ onBookingComplete, onClose }: BookingCalendarProps) =
     return Math.round(price * (1 - appliedCoupon.discount_percent / 100));
   };
 
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   const handleSubmit = async () => {
     if (!selectedDate || !selectedTime || !formData.name || !formData.email) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!validateEmail(formData.email)) {
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address.",
         variant: "destructive"
       });
       return;
