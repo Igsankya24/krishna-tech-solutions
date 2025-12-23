@@ -273,6 +273,15 @@ const AdminAppointments = () => {
                           <CheckCircle className="w-4 h-4 mr-1" />
                           Confirm
                         </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-blue-600 hover:text-blue-700"
+                          onClick={() => handleStatusChange(apt.id, "completed")}
+                        >
+                          <CheckCheck className="w-4 h-4 mr-1" />
+                          Complete
+                        </Button>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button size="sm" variant="destructive">
