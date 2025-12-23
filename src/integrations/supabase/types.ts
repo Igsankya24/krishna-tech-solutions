@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      appointments: {
+        Row: {
+          appointment_date: string
+          appointment_time: string
+          cancelled_at: string | null
+          cancelled_by: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          service_type: string | null
+          status: string
+          updated_at: string
+          user_email: string
+          user_name: string
+          user_phone: string | null
+        }
+        Insert: {
+          appointment_date: string
+          appointment_time: string
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          service_type?: string | null
+          status?: string
+          updated_at?: string
+          user_email: string
+          user_name: string
+          user_phone?: string | null
+        }
+        Update: {
+          appointment_date?: string
+          appointment_time?: string
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          service_type?: string | null
+          status?: string
+          updated_at?: string
+          user_email?: string
+          user_name?: string
+          user_phone?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
