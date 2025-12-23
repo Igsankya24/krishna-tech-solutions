@@ -209,7 +209,7 @@ const Auth = () => {
       </div>
 
       {/* Right Side - Auth Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12 min-h-screen">
         <div className="w-full max-w-md">
           {/* Back to Home */}
           <Link
