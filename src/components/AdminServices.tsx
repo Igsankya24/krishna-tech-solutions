@@ -102,8 +102,40 @@ const AdminServices = () => {
     }
   };
 
+  // Auto-import default services if none exist
+  const autoImportDefaults = async () => {
+    try {
+      const { count, error: countError } = await supabase
+        .from("services")
+        .select("*", { count: "exact", head: true });
+
+      if (countError) throw countError;
+
+      if (count === 0) {
+        const servicesToInsert = defaultServices.map((service, index) => ({
+          name: service.name,
+          description: service.description,
+          price: service.price,
+          display_order: index,
+          is_active: true,
+        }));
+
+        const { error } = await supabase.from("services").insert(servicesToInsert);
+        if (error) throw error;
+        
+        toast.success("Default services loaded");
+      }
+    } catch (error) {
+      console.error("Error auto-importing services:", error);
+    }
+  };
+
   useEffect(() => {
-    fetchServices();
+    const init = async () => {
+      await autoImportDefaults();
+      await fetchServices();
+    };
+    init();
 
     const channel = supabase
       .channel("admin-services")
@@ -192,7 +224,7 @@ const AdminServices = () => {
       if (error) throw error;
 
       toast.success(
-        service.is_active ? "Service hidden" : "Service visible"
+        service.is_active ? "Service hidden from website" : "Service visible on website"
       );
     } catch (error) {
       console.error("Error toggling service:", error);
@@ -240,6 +272,9 @@ const AdminServices = () => {
     }
   };
 
+  const activeCount = services.filter(s => s.is_active).length;
+  const hiddenCount = services.filter(s => !s.is_active).length;
+
   if (isLoading) {
     return (
       <div className="bg-card rounded-xl border border-border p-6">
@@ -252,26 +287,30 @@ const AdminServices = () => {
 
   return (
     <div className="bg-card rounded-xl border border-border p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-display font-bold text-lg text-foreground">
-          Services
-        </h3>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h3 className="font-display font-bold text-xl text-foreground">
+            Services Management
+          </h3>
+          <p className="text-sm text-muted-foreground mt-1">
+            Add, edit, hide, or remove services. Active services appear on the website.
+          </p>
+        </div>
         <div className="flex items-center gap-2">
-          {services.length === 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleImportDefaults}
-              disabled={isImporting}
-            >
-              <Download className="w-4 h-4 mr-2" />
-              {isImporting ? "Importing..." : "Import Defaults"}
-            </Button>
-          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleImportDefaults}
+            disabled={isImporting}
+          >
+            <Download className="w-4 h-4 mr-2" />
+            {isImporting ? "Importing..." : "Import Defaults"}
+          </Button>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button size="icon" variant="outline" className="h-8 w-8">
-                <Plus className="w-4 h-4" />
+              <Button size="sm">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Service
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -324,40 +363,45 @@ const AdminServices = () => {
       </div>
 
       {services.length === 0 ? (
-        <p className="text-muted-foreground text-sm text-center py-4">
-          No services added yet. Click "Import Defaults" or + to add services.
+        <p className="text-muted-foreground text-sm text-center py-8">
+          No services found. Click "Add Service" to create one.
         </p>
       ) : (
         <div className="space-y-3">
           {services.map((service) => (
             <div
               key={service.id}
-              className={`flex items-center justify-between p-3 rounded-lg border ${
+              className={`flex items-center justify-between p-4 rounded-lg border ${
                 service.is_active
                   ? "border-border bg-background"
-                  : "border-muted bg-muted/50 opacity-60"
+                  : "border-muted bg-muted/50"
               }`}
             >
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-foreground truncate">
+                <div className="flex items-center gap-3">
+                  <span className={`font-medium ${service.is_active ? "text-foreground" : "text-muted-foreground"}`}>
                     {service.name}
                   </span>
                   <span className="text-sm text-primary font-semibold">
                     ₹{service.price.toLocaleString()}
                   </span>
+                  {!service.is_active && (
+                    <span className="text-xs bg-muted px-2 py-0.5 rounded text-muted-foreground">
+                      Hidden
+                    </span>
+                  )}
                 </div>
                 {service.description && (
-                  <p className="text-xs text-muted-foreground truncate mt-0.5">
+                  <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                     {service.description}
                   </p>
                 )}
               </div>
-              <div className="flex items-center gap-1 ml-2">
+              <div className="flex items-center gap-1 ml-4">
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="h-8 w-8"
+                  className="h-9 w-9"
                   onClick={() => handleEditClick(service)}
                   title="Edit service"
                 >
@@ -366,12 +410,12 @@ const AdminServices = () => {
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="h-8 w-8"
+                  className="h-9 w-9"
                   onClick={() => handleToggleVisibility(service)}
-                  title={service.is_active ? "Hide service" : "Show service"}
+                  title={service.is_active ? "Hide from website" : "Show on website"}
                 >
                   {service.is_active ? (
-                    <Eye className="w-4 h-4 text-muted-foreground" />
+                    <Eye className="w-4 h-4 text-green-600" />
                   ) : (
                     <EyeOff className="w-4 h-4 text-muted-foreground" />
                   )}
@@ -379,7 +423,7 @@ const AdminServices = () => {
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
+                  className="h-9 w-9 hover:bg-destructive/10 hover:text-destructive"
                   onClick={() => handleRemoveService(service.id)}
                   title="Remove service"
                 >
@@ -390,6 +434,23 @@ const AdminServices = () => {
           ))}
         </div>
       )}
+
+      {/* Total Services Count */}
+      <div className="mt-6 pt-4 border-t border-border">
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">
+            Total Services: <span className="font-semibold text-foreground">{services.length}</span>
+          </span>
+          <div className="flex gap-4">
+            <span className="text-muted-foreground">
+              Active: <span className="font-semibold text-green-600">{activeCount}</span>
+            </span>
+            <span className="text-muted-foreground">
+              Hidden: <span className="font-semibold text-muted-foreground">{hiddenCount}</span>
+            </span>
+          </div>
+        </div>
+      </div>
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>

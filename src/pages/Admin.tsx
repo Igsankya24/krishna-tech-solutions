@@ -15,23 +15,25 @@ import {
   Shield,
   ArrowLeft,
   RefreshCw,
+  Wrench,
 } from "lucide-react";
 import AdminAppointments from "@/components/AdminAppointments";
 import AdminUsers from "@/components/AdminUsers";
 import AdminSettings from "@/components/AdminSettings";
 import AdminServices from "@/components/AdminServices";
 
-type AdminView = "dashboard" | "appointments" | "users" | "settings";
+type AdminView = "dashboard" | "appointments" | "users" | "settings" | "services";
 
 interface Stats {
   totalUsers: number;
   totalAppointments: number;
   pendingAppointments: number;
+  totalServices: number;
 }
 
 const Admin = () => {
   const [currentView, setCurrentView] = useState<AdminView>("dashboard");
-  const [stats, setStats] = useState<Stats>({ totalUsers: 0, totalAppointments: 0, pendingAppointments: 0 });
+  const [stats, setStats] = useState<Stats>({ totalUsers: 0, totalAppointments: 0, pendingAppointments: 0, totalServices: 0 });
   const [isRefreshing, setIsRefreshing] = useState(false);
   const navigate = useNavigate();
   const { user, isAdmin, isApproved, isLoading, signOut } = useAuth();
@@ -48,6 +50,11 @@ const Admin = () => {
         .from("appointments")
         .select("status");
 
+      // Fetch services count
+      const { count: serviceCount } = await supabase
+        .from("services")
+        .select("*", { count: "exact", head: true });
+
       const totalAppointments = appointments?.length || 0;
       const pendingAppointments = appointments?.filter((a) => a.status === "pending").length || 0;
 
@@ -55,6 +62,7 @@ const Admin = () => {
         totalUsers: userCount || 0,
         totalAppointments,
         pendingAppointments,
+        totalServices: serviceCount || 0,
       });
     } catch (error) {
       console.error("Error fetching stats:", error);
@@ -94,9 +102,19 @@ const Admin = () => {
       )
       .subscribe();
 
+    const servicesChannel = supabase
+      .channel("admin-services-stats")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "services" },
+        () => fetchStats()
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(appointmentsChannel);
       supabase.removeChannel(profilesChannel);
+      supabase.removeChannel(servicesChannel);
     };
   }, [fetchStats]);
 
@@ -149,6 +167,13 @@ const Admin = () => {
       description: "View registered users",
       color: "from-orange-500 to-orange-600",
       view: "users" as AdminView,
+    },
+    {
+      icon: Wrench,
+      title: "Services",
+      description: "Manage your services",
+      color: "from-cyan-500 to-cyan-600",
+      view: "services" as AdminView,
     },
     {
       icon: Settings,
@@ -280,11 +305,6 @@ const Admin = () => {
               ))}
             </div>
 
-            {/* Services Management */}
-            <div className="mt-8">
-              <AdminServices />
-            </div>
-
             {/* Quick Stats - Now with real data */}
             <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-card rounded-xl p-4 border border-border text-center">
@@ -301,9 +321,9 @@ const Admin = () => {
               </div>
               <div className="bg-card rounded-xl p-4 border border-border text-center">
                 <p className="font-display text-2xl font-bold gradient-text">
-                  {stats.pendingAppointments}
+                  {stats.totalServices}
                 </p>
-                <p className="text-sm text-muted-foreground">Pending</p>
+                <p className="text-sm text-muted-foreground">Total Services</p>
               </div>
               <div className="bg-card rounded-xl p-4 border border-border text-center">
                 <p className="font-display text-2xl font-bold gradient-text">
@@ -338,6 +358,19 @@ const Admin = () => {
               Back to Dashboard
             </Button>
             <AdminUsers />
+          </div>
+        ) : currentView === "services" ? (
+          <div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setCurrentView("dashboard")}
+              className="mb-4"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Dashboard
+            </Button>
+            <AdminServices />
           </div>
         ) : currentView === "settings" ? (
           <div>
