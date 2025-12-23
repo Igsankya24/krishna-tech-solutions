@@ -146,10 +146,20 @@ const defaultServices = [
 const Services = () => {
   const [dbServices, setDbServices] = useState<Service[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasDbServices, setHasDbServices] = useState(false);
 
   useEffect(() => {
     const fetchServices = async () => {
       try {
+        // First check if any services exist in DB (including hidden ones)
+        const { count } = await supabase
+          .from("services")
+          .select("*", { count: "exact", head: true });
+
+        const servicesExistInDb = (count || 0) > 0;
+        setHasDbServices(servicesExistInDb);
+
+        // Then fetch only active services
         const { data, error } = await supabase
           .from("services")
           .select("*")
@@ -182,8 +192,8 @@ const Services = () => {
     };
   }, []);
 
-  // Use database services, fall back to defaults only if database is empty
-  const displayServices = dbServices.length > 0
+  // Only use database services if services exist in DB, otherwise show defaults
+  const displayServices = hasDbServices
     ? dbServices.map((service) => ({
         icon: Cpu as LucideIcon,
         title: service.name,
@@ -224,6 +234,10 @@ const Services = () => {
         <div className="container mx-auto px-4">
           {isLoading ? (
             <div className="text-center text-muted-foreground">Loading services...</div>
+          ) : displayServices.length === 0 ? (
+            <div className="text-center text-muted-foreground py-8">
+              <p>No services available at the moment. Please check back later.</p>
+            </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
               {displayServices.map((service, idx) => (
