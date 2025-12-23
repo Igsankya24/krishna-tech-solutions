@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { CalendarIcon, Clock, CheckCircle } from "lucide-react";
+import { CalendarIcon, Clock, CheckCircle, Ticket, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface BookingCalendarProps {
@@ -30,6 +30,14 @@ const TIME_SLOTS = [
 interface Service {
   id: string;
   name: string;
+  price: number;
+}
+
+interface Coupon {
+  id: string;
+  code: string;
+  name: string;
+  discount_percent: number;
 }
 
 const BookingCalendar = ({ onBookingComplete, onClose }: BookingCalendarProps) => {
@@ -39,6 +47,9 @@ const BookingCalendar = ({ onBookingComplete, onClose }: BookingCalendarProps) =
   const [bookedSlots, setBookedSlots] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [services, setServices] = useState<Service[]>([]);
+  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
+  const [couponInput, setCouponInput] = useState("");
+  const [couponError, setCouponError] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -52,7 +63,7 @@ const BookingCalendar = ({ onBookingComplete, onClose }: BookingCalendarProps) =
     const fetchServices = async () => {
       const { data } = await supabase
         .from("services")
-        .select("id, name")
+        .select("id, name, price")
         .eq("is_active", true)
         .order("display_order", { ascending: true });
       
@@ -110,6 +121,57 @@ const BookingCalendar = ({ onBookingComplete, onClose }: BookingCalendarProps) =
   const handleTimeSelect = (time: string) => {
     setSelectedTime(time);
     setStep("details");
+  };
+
+  const handleApplyCoupon = async () => {
+    if (!couponInput.trim()) {
+      setCouponError("Please enter a coupon code");
+      return;
+    }
+
+    setCouponError("");
+
+    try {
+      const { data, error } = await supabase
+        .from("coupons")
+        .select("id, code, name, discount_percent")
+        .eq("code", couponInput.trim().toUpperCase())
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data) {
+        setAppliedCoupon(data);
+        setCouponInput("");
+        toast({
+          title: "Coupon Applied!",
+          description: `${data.name}: ${data.discount_percent}% discount applied.`,
+        });
+      } else {
+        setCouponError("Invalid or expired coupon code");
+      }
+    } catch (error) {
+      console.error("Error applying coupon:", error);
+      setCouponError("Failed to apply coupon");
+    }
+  };
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponInput("");
+    setCouponError("");
+  };
+
+  const getSelectedServicePrice = () => {
+    const service = services.find(s => s.name === formData.service);
+    return service?.price || 0;
+  };
+
+  const getDiscountedPrice = () => {
+    const price = getSelectedServicePrice();
+    if (!appliedCoupon) return price;
+    return Math.round(price * (1 - appliedCoupon.discount_percent / 100));
   };
 
   const handleSubmit = async () => {
@@ -314,12 +376,93 @@ const BookingCalendar = ({ onBookingComplete, onClose }: BookingCalendarProps) =
                 <SelectContent>
                   {services.map((service) => (
                     <SelectItem key={service.id} value={service.name}>
-                      {service.name}
+                      {service.name} - ₹{service.price.toLocaleString()}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Coupon Section */}
+            <div className="pt-2 border-t border-border">
+              <Label className="flex items-center gap-1">
+                <Ticket className="w-4 h-4" />
+                Have a coupon?
+              </Label>
+              {appliedCoupon ? (
+                <div className="flex items-center justify-between bg-green-500/10 text-green-700 px-3 py-2 rounded-md mt-1">
+                  <span className="text-sm font-medium">
+                    {appliedCoupon.name} (-{appliedCoupon.discount_percent}%)
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={removeCoupon}
+                    className="h-6 w-6 p-0 hover:bg-green-500/20"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex gap-2 mt-1">
+                  <Input
+                    value={couponInput}
+                    onChange={(e) => {
+                      setCouponInput(e.target.value.toUpperCase());
+                      setCouponError("");
+                    }}
+                    onKeyPress={(e) => e.key === "Enter" && handleApplyCoupon()}
+                    placeholder="Enter code"
+                    className="flex-1 uppercase text-sm"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleApplyCoupon}
+                  >
+                    Apply
+                  </Button>
+                </div>
+              )}
+              {couponError && (
+                <p className="text-xs text-destructive mt-1">{couponError}</p>
+              )}
+            </div>
+
+            {/* Price Summary */}
+            {formData.service && (
+              <div className="bg-muted/50 rounded-lg p-3 space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Service:</span>
+                  <span>{formData.service}</span>
+                </div>
+                {appliedCoupon ? (
+                  <>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Original Price:</span>
+                      <span className="line-through text-muted-foreground">
+                        ₹{getSelectedServicePrice().toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm text-green-600">
+                      <span>Discount ({appliedCoupon.discount_percent}%):</span>
+                      <span>
+                        -₹{(getSelectedServicePrice() - getDiscountedPrice()).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between font-semibold pt-1 border-t border-border">
+                      <span>Total:</span>
+                      <span className="text-primary">₹{getDiscountedPrice().toLocaleString()}</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex justify-between font-semibold">
+                    <span>Price:</span>
+                    <span className="text-primary">₹{getSelectedServicePrice().toLocaleString()}</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <Button 
