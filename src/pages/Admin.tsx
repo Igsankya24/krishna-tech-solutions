@@ -67,6 +67,7 @@ const Admin = () => {
   const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [userName, setUserName] = useState<string | null>(null);
+  const [notificationOpen, setNotificationOpen] = useState(false);
   const navigate = useNavigate();
   const { user, isAdmin, isSuperAdmin, isApproved, isLoading, signOut } = useAuth();
 
@@ -308,7 +309,7 @@ const Admin = () => {
             {/* User Info & Actions */}
             <div className="flex items-center gap-2 sm:gap-4">
               {/* Notification Bell */}
-              <Popover>
+              <Popover open={notificationOpen} onOpenChange={setNotificationOpen}>
                 <PopoverTrigger asChild>
                   <Button variant="ghost" size="sm" className="relative">
                     <Bell className="w-4 h-4" />
@@ -334,7 +335,10 @@ const Admin = () => {
                           <div
                             key={pendingUser.id}
                             className="p-3 border-b border-border hover:bg-muted/50 cursor-pointer flex items-center gap-3"
-                            onClick={() => setCurrentView("users")}
+                            onClick={() => {
+                              setCurrentView("users");
+                              setNotificationOpen(false);
+                            }}
                           >
                             <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0">
                               <User className="w-4 h-4 text-amber-600" />
@@ -372,6 +376,7 @@ const Admin = () => {
                           className="p-3 border-b border-border last:border-b-0 hover:bg-muted/50 cursor-pointer"
                           onClick={() => {
                             setCurrentView("appointments");
+                            setNotificationOpen(false);
                           }}
                         >
                           <div className="flex items-start justify-between gap-2">
@@ -400,7 +405,10 @@ const Admin = () => {
                         variant="ghost"
                         size="sm"
                         className="w-full text-xs"
-                        onClick={() => setCurrentView("appointments")}
+                        onClick={() => {
+                          setCurrentView("appointments");
+                          setNotificationOpen(false);
+                        }}
                       >
                         View All Appointments
                       </Button>
