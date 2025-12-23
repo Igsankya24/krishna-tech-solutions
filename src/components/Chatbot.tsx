@@ -2,16 +2,24 @@ import { useState } from "react";
 import { MessageCircle, X, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import BookingCalendar from "@/components/BookingCalendar";
+
+interface Message {
+  type: "bot" | "user";
+  text?: string;
+  component?: "calendar";
+}
 
 const Chatbot = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState([
+  const [messages, setMessages] = useState<Message[]>([
     {
       type: "bot",
       text: "Hello! 👋 Welcome to Krishna Tech Solutions. How can I help you today?",
     },
   ]);
   const [input, setInput] = useState("");
+  const [showCalendar, setShowCalendar] = useState(false);
 
   const quickOptions = [
     "Data Recovery",
@@ -25,16 +33,30 @@ const Chatbot = () => {
 
     setMessages([...messages, { type: "user", text: input }]);
 
-    // Simulate bot response
-    setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          type: "bot",
-          text: "Thank you for your message! Our team will get back to you shortly. For immediate assistance, please call us at +91 98765 43210.",
-        },
-      ]);
-    }, 1000);
+    // Check if user wants to book
+    const lowerInput = input.toLowerCase();
+    if (lowerInput.includes("book") || lowerInput.includes("appointment") || lowerInput.includes("schedule")) {
+      setTimeout(() => {
+        setMessages((prev) => [
+          ...prev,
+          {
+            type: "bot",
+            text: "I'd be happy to help you book an appointment! Please select a date and time:",
+          },
+        ]);
+        setShowCalendar(true);
+      }, 500);
+    } else {
+      setTimeout(() => {
+        setMessages((prev) => [
+          ...prev,
+          {
+            type: "bot",
+            text: "Thank you for your message! Our team will get back to you shortly. For immediate assistance, please call us at +91 98765 43210.",
+          },
+        ]);
+      }, 1000);
+    }
 
     setInput("");
   };
@@ -44,6 +66,8 @@ const Chatbot = () => {
 
     setTimeout(() => {
       let response = "";
+      let openCalendar = false;
+      
       switch (option) {
         case "Data Recovery":
           response =
@@ -58,14 +82,28 @@ const Chatbot = () => {
             "We can reset Windows passwords without any data loss. This service is quick and affordable. Visit us or book an appointment!";
           break;
         case "Book Appointment":
-          response =
-            "Great! Please visit our Contact page or call us at +91 98765 43210 to schedule an appointment at your convenience.";
+          response = "I'd be happy to help you book an appointment! Please select a date and time:";
+          openCalendar = true;
           break;
         default:
           response = "How can I assist you further?";
       }
       setMessages((prev) => [...prev, { type: "bot", text: response }]);
+      if (openCalendar) {
+        setShowCalendar(true);
+      }
     }, 800);
+  };
+
+  const handleBookingComplete = () => {
+    setShowCalendar(false);
+    setMessages((prev) => [
+      ...prev,
+      {
+        type: "bot",
+        text: "Your appointment has been booked successfully! We look forward to seeing you. Is there anything else I can help you with?",
+      },
+    ]);
   };
 
   return (
@@ -126,20 +164,32 @@ const Chatbot = () => {
             ))}
           </div>
 
-          {/* Quick Options */}
-          <div className="px-4 py-3 border-t border-border bg-card">
-            <div className="flex flex-wrap gap-2">
-              {quickOptions.map((option) => (
-                <button
-                  key={option}
-                  onClick={() => handleQuickOption(option)}
-                  className="px-3 py-1.5 text-xs font-medium rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                >
-                  {option}
-                </button>
-              ))}
+          {/* Calendar */}
+          {showCalendar && (
+            <div className="px-4 py-3 border-t border-border bg-muted/30">
+              <BookingCalendar
+                onBookingComplete={handleBookingComplete}
+                onClose={() => setShowCalendar(false)}
+              />
             </div>
-          </div>
+          )}
+
+          {/* Quick Options */}
+          {!showCalendar && (
+            <div className="px-4 py-3 border-t border-border bg-card">
+              <div className="flex flex-wrap gap-2">
+                {quickOptions.map((option) => (
+                  <button
+                    key={option}
+                    onClick={() => handleQuickOption(option)}
+                    className="px-3 py-1.5 text-xs font-medium rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Input */}
           <div className="p-4 border-t border-border bg-card flex gap-2">
