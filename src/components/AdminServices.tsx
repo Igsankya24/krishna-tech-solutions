@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Minus, Eye, EyeOff, Pencil } from "lucide-react";
+import { Plus, Minus, Eye, EyeOff, Pencil, Download } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -23,12 +23,57 @@ interface Service {
   display_order: number;
 }
 
+// Default services that can be imported
+const defaultServices = [
+  {
+    name: "Data Recovery",
+    description: "Professional data recovery from all types of storage devices. We handle HDDs, SSDs, USB drives, SD cards, and RAID systems.",
+    price: 999,
+  },
+  {
+    name: "Windows Upgrade",
+    description: "Seamless Windows upgrades from any version to the latest Windows 11. All your files, apps, and settings stay intact.",
+    price: 999,
+  },
+  {
+    name: "Password Recovery",
+    description: "Reset or remove Windows passwords without losing any data. Fast, secure, and reliable service.",
+    price: 499,
+  },
+  {
+    name: "Computer Repair",
+    description: "Expert hardware and software repairs for laptops and desktops. We fix all brands and models.",
+    price: 299,
+  },
+  {
+    name: "Virus Removal",
+    description: "Complete malware, virus, and spyware removal. We clean your system and install protection.",
+    price: 599,
+  },
+  {
+    name: "Backup Solutions",
+    description: "Set up automated backup systems to protect your valuable data. Cloud and local options available.",
+    price: 799,
+  },
+  {
+    name: "Software Installation",
+    description: "Professional installation of operating systems and software. Includes configuration and optimization.",
+    price: 399,
+  },
+  {
+    name: "Network Setup",
+    description: "Home and small office network setup. WiFi configuration, security, and troubleshooting.",
+    price: 699,
+  },
+];
+
 const AdminServices = () => {
   const [services, setServices] = useState<Service[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
   const [newService, setNewService] = useState({
     name: "",
     description: "",
@@ -171,6 +216,30 @@ const AdminServices = () => {
     }
   };
 
+  const handleImportDefaults = async () => {
+    setIsImporting(true);
+    try {
+      const servicesToInsert = defaultServices.map((service, index) => ({
+        name: service.name,
+        description: service.description,
+        price: service.price,
+        display_order: services.length + index,
+        is_active: true,
+      }));
+
+      const { error } = await supabase.from("services").insert(servicesToInsert);
+
+      if (error) throw error;
+
+      toast.success("Default services imported successfully");
+    } catch (error) {
+      console.error("Error importing services:", error);
+      toast.error("Failed to import default services");
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="bg-card rounded-xl border border-border p-6">
@@ -187,63 +256,76 @@ const AdminServices = () => {
         <h3 className="font-display font-bold text-lg text-foreground">
           Services
         </h3>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button size="icon" variant="outline" className="h-8 w-8">
-              <Plus className="w-4 h-4" />
+        <div className="flex items-center gap-2">
+          {services.length === 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleImportDefaults}
+              disabled={isImporting}
+            >
+              <Download className="w-4 h-4 mr-2" />
+              {isImporting ? "Importing..." : "Import Defaults"}
             </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add New Service</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 mt-4">
-              <div>
-                <Label htmlFor="name">Service Name</Label>
-                <Input
-                  id="name"
-                  value={newService.name}
-                  onChange={(e) =>
-                    setNewService({ ...newService, name: e.target.value })
-                  }
-                  placeholder="e.g., Website Development"
-                />
-              </div>
-              <div>
-                <Label htmlFor="price">Price (₹)</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  value={newService.price}
-                  onChange={(e) =>
-                    setNewService({ ...newService, price: e.target.value })
-                  }
-                  placeholder="e.g., 5000"
-                />
-              </div>
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={newService.description}
-                  onChange={(e) =>
-                    setNewService({ ...newService, description: e.target.value })
-                  }
-                  placeholder="Brief description of the service"
-                  rows={3}
-                />
-              </div>
-              <Button onClick={handleAddService} className="w-full">
-                Add Service
+          )}
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button size="icon" variant="outline" className="h-8 w-8">
+                <Plus className="w-4 h-4" />
               </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Service</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 mt-4">
+                <div>
+                  <Label htmlFor="name">Service Name</Label>
+                  <Input
+                    id="name"
+                    value={newService.name}
+                    onChange={(e) =>
+                      setNewService({ ...newService, name: e.target.value })
+                    }
+                    placeholder="e.g., Website Development"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="price">Price (₹)</Label>
+                  <Input
+                    id="price"
+                    type="number"
+                    value={newService.price}
+                    onChange={(e) =>
+                      setNewService({ ...newService, price: e.target.value })
+                    }
+                    placeholder="e.g., 5000"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    value={newService.description}
+                    onChange={(e) =>
+                      setNewService({ ...newService, description: e.target.value })
+                    }
+                    placeholder="Brief description of the service"
+                    rows={3}
+                  />
+                </div>
+                <Button onClick={handleAddService} className="w-full">
+                  Add Service
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {services.length === 0 ? (
         <p className="text-muted-foreground text-sm text-center py-4">
-          No services added yet. Click + to add one.
+          No services added yet. Click "Import Defaults" or + to add services.
         </p>
       ) : (
         <div className="space-y-3">
