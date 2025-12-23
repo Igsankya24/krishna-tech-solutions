@@ -18,6 +18,8 @@ import {
   Wrench,
   Ticket,
   Bell,
+  User,
+  UserPlus,
 } from "lucide-react";
 import {
   Popover,
@@ -49,11 +51,20 @@ interface RecentAppointment {
   created_at: string;
 }
 
+interface PendingUser {
+  id: string;
+  user_id: string;
+  full_name: string | null;
+  email: string | null;
+  created_at: string;
+}
+
 const Admin = () => {
   const [currentView, setCurrentView] = useState<AdminView>("dashboard");
   const [stats, setStats] = useState<Stats>({ totalUsers: 0, totalAppointments: 0, pendingAppointments: 0, totalServices: 0 });
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [recentAppointments, setRecentAppointments] = useState<RecentAppointment[]>([]);
+  const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const navigate = useNavigate();
   const { user, isAdmin, isApproved, isLoading, signOut } = useAuth();
@@ -100,17 +111,36 @@ const Admin = () => {
 
       if (data) {
         setRecentAppointments(data);
-        // Count appointments from last 24 hours as "unread"
-        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-        const newCount = data.filter(
-          (apt) => new Date(apt.created_at) > oneDayAgo
-        ).length;
-        setUnreadCount(newCount);
       }
     } catch (error) {
       console.error("Error fetching recent appointments:", error);
     }
   }, []);
+
+  const fetchPendingUsers = useCallback(async () => {
+    try {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, user_id, full_name, email, created_at")
+        .eq("is_approved", false)
+        .order("created_at", { ascending: false });
+
+      if (data) {
+        setPendingUsers(data);
+      }
+    } catch (error) {
+      console.error("Error fetching pending users:", error);
+    }
+  }, []);
+
+  // Calculate unread count from appointments and pending users
+  useEffect(() => {
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const recentAppointmentCount = recentAppointments.filter(
+      (apt) => new Date(apt.created_at) > oneDayAgo
+    ).length;
+    setUnreadCount(recentAppointmentCount + pendingUsers.length);
+  }, [recentAppointments, pendingUsers]);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -118,13 +148,14 @@ const Admin = () => {
     }
   }, [user, isLoading, navigate]);
 
-  // Fetch stats and recent appointments on login/mount
+  // Fetch stats and notifications on login/mount
   useEffect(() => {
     if (user) {
       fetchStats();
       fetchRecentAppointments();
+      fetchPendingUsers();
     }
-  }, [user, fetchStats, fetchRecentAppointments]);
+  }, [user, fetchStats, fetchRecentAppointments, fetchPendingUsers]);
 
   // Real-time updates for stats
   useEffect(() => {
@@ -145,7 +176,10 @@ const Admin = () => {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "profiles" },
-        () => fetchStats()
+        () => {
+          fetchStats();
+          fetchPendingUsers();
+        }
       )
       .subscribe();
 
@@ -271,10 +305,47 @@ const Admin = () => {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-80 p-0" align="end">
+                  {/* Pending User Approvals */}
+                  {pendingUsers.length > 0 && (
+                    <>
+                      <div className="p-3 border-b border-border bg-amber-500/10">
+                        <h4 className="font-semibold text-sm flex items-center gap-2 text-amber-700">
+                          <UserPlus className="w-4 h-4" />
+                          Pending Approvals ({pendingUsers.length})
+                        </h4>
+                      </div>
+                      <div className="max-h-40 overflow-y-auto">
+                        {pendingUsers.map((pendingUser) => (
+                          <div
+                            key={pendingUser.id}
+                            className="p-3 border-b border-border hover:bg-muted/50 cursor-pointer flex items-center gap-3"
+                            onClick={() => setCurrentView("users")}
+                          >
+                            <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0">
+                              <User className="w-4 h-4 text-amber-600" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm truncate">
+                                {pendingUser.full_name || "Unknown User"}
+                              </p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {pendingUser.email || "No email"}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+
+                  {/* Recent Bookings */}
                   <div className="p-3 border-b border-border">
-                    <h4 className="font-semibold text-sm">Recent Bookings</h4>
+                    <h4 className="font-semibold text-sm flex items-center gap-2">
+                      <Calendar className="w-4 h-4" />
+                      Recent Bookings
+                    </h4>
                   </div>
-                  <div className="max-h-80 overflow-y-auto">
+                  <div className="max-h-60 overflow-y-auto">
                     {recentAppointments.length === 0 ? (
                       <div className="p-4 text-center text-sm text-muted-foreground">
                         No recent appointments
