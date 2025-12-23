@@ -1,7 +1,9 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import ServiceCard from "@/components/ServiceCard";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 import {
   HardDrive,
   RefreshCw,
@@ -12,123 +14,170 @@ import {
   Laptop,
   Server,
   ArrowRight,
+  Cpu,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+
+interface Service {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  is_active: boolean;
+  display_order: number;
+}
+
+// Default services as fallback
+const defaultServices = [
+  {
+    icon: HardDrive,
+    title: "Data Recovery",
+    description:
+      "Professional data recovery from all types of storage devices. We handle HDDs, SSDs, USB drives, SD cards, and RAID systems.",
+    features: [
+      "Hard Drive Recovery",
+      "SSD Data Recovery",
+      "USB & SD Card Recovery",
+      "RAID Recovery",
+      "Deleted File Recovery",
+    ],
+    price: "₹999",
+  },
+  {
+    icon: RefreshCw,
+    title: "Windows Upgrade",
+    description:
+      "Seamless Windows upgrades from any version to the latest Windows 11. All your files, apps, and settings stay intact.",
+    features: [
+      "Windows 10/11 Upgrade",
+      "Data Preservation",
+      "Application Migration",
+      "Driver Updates",
+      "Performance Optimization",
+    ],
+    price: "₹999",
+  },
+  {
+    icon: KeyRound,
+    title: "Password Recovery",
+    description:
+      "Reset or remove Windows passwords without losing any data. Fast, secure, and reliable service.",
+    features: [
+      "Windows Password Reset",
+      "Admin Account Recovery",
+      "BIOS Password Removal",
+      "No Data Loss",
+      "Same Day Service",
+    ],
+    price: "₹499",
+  },
+  {
+    icon: Wrench,
+    title: "Computer Repair",
+    description:
+      "Expert hardware and software repairs for laptops and desktops. We fix all brands and models.",
+    features: [
+      "Hardware Diagnostics",
+      "Screen Replacement",
+      "Keyboard Repair",
+      "Battery Replacement",
+      "Motherboard Repair",
+    ],
+    price: "₹299",
+  },
+  {
+    icon: Bug,
+    title: "Virus Removal",
+    description:
+      "Complete malware, virus, and spyware removal. We clean your system and install protection.",
+    features: [
+      "Malware Removal",
+      "Ransomware Recovery",
+      "Spyware Cleanup",
+      "Antivirus Installation",
+      "Security Setup",
+    ],
+    price: "₹599",
+  },
+  {
+    icon: Shield,
+    title: "Backup Solutions",
+    description:
+      "Set up automated backup systems to protect your valuable data. Cloud and local options available.",
+    features: [
+      "Cloud Backup Setup",
+      "Local Backup Solutions",
+      "Automated Scheduling",
+      "Data Encryption",
+      "Disaster Recovery Plan",
+    ],
+    price: "₹799",
+  },
+  {
+    icon: Laptop,
+    title: "Software Installation",
+    description:
+      "Professional installation of operating systems and software. Includes configuration and optimization.",
+    features: [
+      "OS Installation",
+      "Office Suite Setup",
+      "Development Tools",
+      "Design Software",
+      "License Activation",
+    ],
+    price: "₹399",
+  },
+  {
+    icon: Server,
+    title: "Network Setup",
+    description:
+      "Home and small office network setup. WiFi configuration, security, and troubleshooting.",
+    features: [
+      "WiFi Setup",
+      "Router Configuration",
+      "Network Security",
+      "Speed Optimization",
+      "Printer Sharing",
+    ],
+    price: "₹699",
+  },
+];
 
 const Services = () => {
-  const services = [
-    {
-      icon: HardDrive,
-      title: "Data Recovery",
-      description:
-        "Professional data recovery from all types of storage devices. We handle HDDs, SSDs, USB drives, SD cards, and RAID systems.",
-      features: [
-        "Hard Drive Recovery",
-        "SSD Data Recovery",
-        "USB & SD Card Recovery",
-        "RAID Recovery",
-        "Deleted File Recovery",
-      ],
-      price: "₹999",
-    },
-    {
-      icon: RefreshCw,
-      title: "Windows Upgrade",
-      description:
-        "Seamless Windows upgrades from any version to the latest Windows 11. All your files, apps, and settings stay intact.",
-      features: [
-        "Windows 10/11 Upgrade",
-        "Data Preservation",
-        "Application Migration",
-        "Driver Updates",
-        "Performance Optimization",
-      ],
-      price: "₹999",
-    },
-    {
-      icon: KeyRound,
-      title: "Password Recovery",
-      description:
-        "Reset or remove Windows passwords without losing any data. Fast, secure, and reliable service.",
-      features: [
-        "Windows Password Reset",
-        "Admin Account Recovery",
-        "BIOS Password Removal",
-        "No Data Loss",
-        "Same Day Service",
-      ],
-      price: "₹499",
-    },
-    {
-      icon: Wrench,
-      title: "Computer Repair",
-      description:
-        "Expert hardware and software repairs for laptops and desktops. We fix all brands and models.",
-      features: [
-        "Hardware Diagnostics",
-        "Screen Replacement",
-        "Keyboard Repair",
-        "Battery Replacement",
-        "Motherboard Repair",
-      ],
-      price: "₹299",
-    },
-    {
-      icon: Bug,
-      title: "Virus Removal",
-      description:
-        "Complete malware, virus, and spyware removal. We clean your system and install protection.",
-      features: [
-        "Malware Removal",
-        "Ransomware Recovery",
-        "Spyware Cleanup",
-        "Antivirus Installation",
-        "Security Setup",
-      ],
-      price: "₹599",
-    },
-    {
-      icon: Shield,
-      title: "Backup Solutions",
-      description:
-        "Set up automated backup systems to protect your valuable data. Cloud and local options available.",
-      features: [
-        "Cloud Backup Setup",
-        "Local Backup Solutions",
-        "Automated Scheduling",
-        "Data Encryption",
-        "Disaster Recovery Plan",
-      ],
-      price: "₹799",
-    },
-    {
-      icon: Laptop,
-      title: "Software Installation",
-      description:
-        "Professional installation of operating systems and software. Includes configuration and optimization.",
-      features: [
-        "OS Installation",
-        "Office Suite Setup",
-        "Development Tools",
-        "Design Software",
-        "License Activation",
-      ],
-      price: "₹399",
-    },
-    {
-      icon: Server,
-      title: "Network Setup",
-      description:
-        "Home and small office network setup. WiFi configuration, security, and troubleshooting.",
-      features: [
-        "WiFi Setup",
-        "Router Configuration",
-        "Network Security",
-        "Speed Optimization",
-        "Printer Sharing",
-      ],
-      price: "₹699",
-    },
-  ];
+  const [dbServices, setDbServices] = useState<Service[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("services")
+          .select("*")
+          .eq("is_active", true)
+          .order("display_order", { ascending: true });
+
+        if (error) throw error;
+        setDbServices(data || []);
+      } catch (error) {
+        console.error("Error fetching services:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchServices();
+  }, []);
+
+  // Combine database services with default services
+  const displayServices = dbServices.length > 0
+    ? dbServices.map((service) => ({
+        icon: Cpu as LucideIcon,
+        title: service.name,
+        description: service.description || "",
+        features: [],
+        price: `₹${service.price.toLocaleString()}`,
+      }))
+    : defaultServices;
 
   return (
     <Layout>
@@ -159,11 +208,15 @@ const Services = () => {
       {/* Services Grid */}
       <section className="py-24 bg-background">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-            {services.map((service, idx) => (
-              <ServiceCard key={idx} {...service} />
-            ))}
-          </div>
+          {isLoading ? (
+            <div className="text-center text-muted-foreground">Loading services...</div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+              {displayServices.map((service, idx) => (
+                <ServiceCard key={idx} {...service} />
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
