@@ -250,7 +250,7 @@ const Contact = () => {
               <h3 className="font-display text-2xl font-bold text-foreground mb-2">Need Immediate Assistance?</h3>
               <p className="text-muted-foreground">Call us directly for urgent tech support.</p>
             </div>
-            <a href="tel:+919876543210">
+            <a href="tel:+917026292525">
               <Button variant="hero" size="lg">
                 <Phone className="w-5 h-5" />
                 Call: +91 7026292525
