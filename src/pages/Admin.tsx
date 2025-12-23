@@ -17,7 +17,14 @@ import {
   RefreshCw,
   Wrench,
   Ticket,
+  Bell,
 } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { format } from "date-fns";
 import AdminAppointments from "@/components/AdminAppointments";
 import AdminUsers from "@/components/AdminUsers";
 import AdminSettings from "@/components/AdminSettings";
@@ -33,10 +40,21 @@ interface Stats {
   totalServices: number;
 }
 
+interface RecentAppointment {
+  id: string;
+  user_name: string;
+  service_type: string | null;
+  appointment_date: string;
+  appointment_time: string;
+  created_at: string;
+}
+
 const Admin = () => {
   const [currentView, setCurrentView] = useState<AdminView>("dashboard");
   const [stats, setStats] = useState<Stats>({ totalUsers: 0, totalAppointments: 0, pendingAppointments: 0, totalServices: 0 });
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [recentAppointments, setRecentAppointments] = useState<RecentAppointment[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const navigate = useNavigate();
   const { user, isAdmin, isApproved, isLoading, signOut } = useAuth();
 
@@ -72,18 +90,41 @@ const Admin = () => {
     }
   }, []);
 
+  const fetchRecentAppointments = useCallback(async () => {
+    try {
+      const { data } = await supabase
+        .from("appointments")
+        .select("id, user_name, service_type, appointment_date, appointment_time, created_at")
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      if (data) {
+        setRecentAppointments(data);
+        // Count appointments from last 24 hours as "unread"
+        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        const newCount = data.filter(
+          (apt) => new Date(apt.created_at) > oneDayAgo
+        ).length;
+        setUnreadCount(newCount);
+      }
+    } catch (error) {
+      console.error("Error fetching recent appointments:", error);
+    }
+  }, []);
+
   useEffect(() => {
     if (!isLoading && !user) {
       navigate("/auth");
     }
   }, [user, isLoading, navigate]);
 
-  // Fetch stats on login/mount
+  // Fetch stats and recent appointments on login/mount
   useEffect(() => {
     if (user) {
       fetchStats();
+      fetchRecentAppointments();
     }
-  }, [user, fetchStats]);
+  }, [user, fetchStats, fetchRecentAppointments]);
 
   // Real-time updates for stats
   useEffect(() => {
@@ -92,7 +133,10 @@ const Admin = () => {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "appointments" },
-        () => fetchStats()
+        () => {
+          fetchStats();
+          fetchRecentAppointments();
+        }
       )
       .subscribe();
 
@@ -213,7 +257,72 @@ const Admin = () => {
             </Link>
 
             {/* User Info & Actions */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
+              {/* Notification Bell */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="sm" className="relative">
+                    <Bell className="w-4 h-4" />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground text-xs font-bold rounded-full flex items-center justify-center">
+                        {unreadCount}
+                      </span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-0" align="end">
+                  <div className="p-3 border-b border-border">
+                    <h4 className="font-semibold text-sm">Recent Bookings</h4>
+                  </div>
+                  <div className="max-h-80 overflow-y-auto">
+                    {recentAppointments.length === 0 ? (
+                      <div className="p-4 text-center text-sm text-muted-foreground">
+                        No recent appointments
+                      </div>
+                    ) : (
+                      recentAppointments.map((apt) => (
+                        <div
+                          key={apt.id}
+                          className="p-3 border-b border-border last:border-b-0 hover:bg-muted/50 cursor-pointer"
+                          onClick={() => {
+                            setCurrentView("appointments");
+                          }}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm truncate">{apt.user_name}</p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {apt.service_type || "General"}
+                              </p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className="text-xs font-medium">
+                                {format(new Date(apt.appointment_date), "MMM d")}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {apt.appointment_time.slice(0, 5)}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  {recentAppointments.length > 0 && (
+                    <div className="p-2 border-t border-border">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full text-xs"
+                        onClick={() => setCurrentView("appointments")}
+                      >
+                        View All Appointments
+                      </Button>
+                    </div>
+                  )}
+                </PopoverContent>
+              </Popover>
+
               <Button
                 variant="ghost"
                 size="sm"
