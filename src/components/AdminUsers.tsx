@@ -219,25 +219,31 @@ const AdminUsers = () => {
     }
   };
 
-  const handleReject = async (userId: string) => {
+  const handleDeleteUser = async (userId: string, userName: string) => {
     try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ is_approved: false })
-        .eq("user_id", userId);
+      const { data: sessionData } = await supabase.auth.getSession();
+      
+      const response = await supabase.functions.invoke('delete-user', {
+        body: { userId },
+        headers: {
+          Authorization: `Bearer ${sessionData.session?.access_token}`,
+        },
+      });
 
-      if (error) throw error;
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
 
       toast({
-        title: "User Rejected",
-        description: "The user's access has been revoked.",
+        title: "User Deleted",
+        description: `${userName || "User"} has been permanently removed.`,
       });
       fetchUsers();
     } catch (error) {
-      console.error("Error rejecting user:", error);
+      console.error("Error deleting user:", error);
       toast({
         title: "Error",
-        description: "Failed to reject user.",
+        description: "Failed to delete user. Please try again.",
         variant: "destructive",
       });
     }
@@ -436,18 +442,18 @@ const AdminUsers = () => {
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Reject User?</AlertDialogTitle>
+                        <AlertDialogTitle>Delete User?</AlertDialogTitle>
                         <AlertDialogDescription>
-                          Are you sure you want to reject this user? They won't be able to access the admin panel.
+                          Are you sure you want to reject and delete this user? This will permanently remove their account and all associated data. This action cannot be undone.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
-                          onClick={() => handleReject(user.user_id)}
+                          onClick={() => handleDeleteUser(user.user_id, user.full_name || "User")}
                           className="bg-destructive hover:bg-destructive/90"
                         >
-                          Reject
+                          Delete User
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
@@ -580,14 +586,34 @@ const AdminUsers = () => {
                           Approve
                         </Button>
                       ) : (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleReject(user.user_id)}
-                          className="text-muted-foreground hover:text-destructive"
-                        >
-                          Revoke
-                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-muted-foreground hover:text-destructive"
+                            >
+                              Revoke & Delete
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete User?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to revoke access and delete this user? This will permanently remove their account and all associated data. This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleDeleteUser(user.user_id, user.full_name || "User")}
+                                className="bg-destructive hover:bg-destructive/90"
+                              >
+                                Delete User
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       )}
                     </div>
                   </TableCell>
