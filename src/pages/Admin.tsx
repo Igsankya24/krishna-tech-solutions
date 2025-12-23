@@ -19,6 +19,7 @@ import {
 import AdminAppointments from "@/components/AdminAppointments";
 import AdminUsers from "@/components/AdminUsers";
 import AdminSettings from "@/components/AdminSettings";
+import AdminServices from "@/components/AdminServices";
 
 type AdminView = "dashboard" | "appointments" | "users" | "settings";
 
@@ -277,6 +278,11 @@ const Admin = () => {
                   <p className="text-sm text-muted-foreground">{item.description}</p>
                 </div>
               ))}
+            </div>
+
+            {/* Services Management */}
+            <div className="mt-8">
+              <AdminServices />
             </div>
 
             {/* Quick Stats - Now with real data */}
