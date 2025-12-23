@@ -66,6 +66,7 @@ const Admin = () => {
   const [recentAppointments, setRecentAppointments] = useState<RecentAppointment[]>([]);
   const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [userName, setUserName] = useState<string | null>(null);
   const navigate = useNavigate();
   const { user, isAdmin, isApproved, isLoading, signOut } = useAuth();
 
@@ -133,6 +134,23 @@ const Admin = () => {
     }
   }, []);
 
+  const fetchUserName = useCallback(async () => {
+    if (!user) return;
+    try {
+      const { data } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      
+      if (data?.full_name) {
+        setUserName(data.full_name);
+      }
+    } catch (error) {
+      console.error("Error fetching user name:", error);
+    }
+  }, [user]);
+
   // Calculate unread count - only pending users count as notifications
   useEffect(() => {
     setUnreadCount(pendingUsers.length);
@@ -150,8 +168,9 @@ const Admin = () => {
       fetchStats();
       fetchRecentAppointments();
       fetchPendingUsers();
+      fetchUserName();
     }
-  }, [user, fetchStats, fetchRecentAppointments, fetchPendingUsers]);
+  }, [user, fetchStats, fetchRecentAppointments, fetchPendingUsers, fetchUserName]);
 
   // Real-time updates for stats
   useEffect(() => {
@@ -400,11 +419,12 @@ const Admin = () => {
               </Button>
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-medium text-foreground">
-                  {user.email}
+                  {userName || user.email}
                 </p>
                 <p className="text-xs text-muted-foreground flex items-center gap-1 justify-end">
                   {isAdmin && <Shield className="w-3 h-3 text-primary" />}
                   {isAdmin ? "Admin" : "User"}
+                  {userName && <span className="ml-1">• {user.email}</span>}
                 </p>
               </div>
               <Button variant="outline" size="sm" onClick={handleSignOut}>
