@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Table,
   TableBody,
@@ -32,7 +33,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { User, Mail, Calendar, Shield, RefreshCw, CheckCircle, XCircle, Clock, Key, Settings } from "lucide-react";
+import { User, Mail, Calendar, Shield, RefreshCw, CheckCircle, XCircle, Clock, Key, Settings, History, Monitor, LogIn, LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 interface Profile {
@@ -57,6 +58,15 @@ interface UserPermission {
   permission: PermissionType;
 }
 
+interface Session {
+  id: string;
+  user_id: string;
+  login_at: string;
+  logout_at: string | null;
+  user_agent: string | null;
+  is_active: boolean;
+}
+
 interface UserWithRole extends Profile {
   role: "admin" | "user";
   permissions: PermissionType[];
@@ -79,6 +89,10 @@ const AdminUsers = () => {
   const [permissionsDialogOpen, setPermissionsDialogOpen] = useState(false);
   const [selectedPermissions, setSelectedPermissions] = useState<PermissionType[]>([]);
   const [isSavingPermissions, setIsSavingPermissions] = useState(false);
+  const [sessionsDialogOpen, setSessionsDialogOpen] = useState(false);
+  const [selectedUserForSessions, setSelectedUserForSessions] = useState<UserWithRole | null>(null);
+  const [userSessions, setUserSessions] = useState<Session[]>([]);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -296,6 +310,43 @@ const AdminUsers = () => {
     }
   };
 
+  const openSessionsDialog = async (user: UserWithRole) => {
+    setSelectedUserForSessions(user);
+    setSessionsDialogOpen(true);
+    setIsLoadingSessions(true);
+    
+    try {
+      const { data, error } = await supabase
+        .from("sessions")
+        .select("*")
+        .eq("user_id", user.user_id)
+        .order("login_at", { ascending: false })
+        .limit(50);
+      
+      if (error) throw error;
+      setUserSessions(data || []);
+    } catch (error) {
+      console.error("Error fetching sessions:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load session history.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingSessions(false);
+    }
+  };
+
+  const getBrowserFromUserAgent = (userAgent: string | null): string => {
+    if (!userAgent) return "Unknown";
+    if (userAgent.includes("Chrome")) return "Chrome";
+    if (userAgent.includes("Firefox")) return "Firefox";
+    if (userAgent.includes("Safari")) return "Safari";
+    if (userAgent.includes("Edge")) return "Edge";
+    if (userAgent.includes("Opera")) return "Opera";
+    return "Unknown Browser";
+  };
+
   const pendingUsers = users.filter((u) => !u.is_approved);
   const approvedUsers = users.filter((u) => u.is_approved);
 
@@ -495,6 +546,14 @@ const AdminUsers = () => {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openSessionsDialog(user)}
+                      >
+                        <History className="w-3 h-3 mr-1" />
+                        Sessions
+                      </Button>
                       {user.is_approved && (
                         <Button
                           size="sm"
@@ -569,6 +628,83 @@ const AdminUsers = () => {
             </Button>
             <Button onClick={handleSavePermissions} disabled={isSavingPermissions}>
               {isSavingPermissions ? "Saving..." : "Save Permissions"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Sessions History Dialog */}
+      <Dialog open={sessionsDialogOpen} onOpenChange={setSessionsDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="w-5 h-5" />
+              Session History
+            </DialogTitle>
+            <DialogDescription>
+              Login history for {selectedUserForSessions?.full_name || "this user"}
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[400px]">
+            {isLoadingSessions ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Loading sessions...
+              </div>
+            ) : userSessions.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No session history found.
+              </div>
+            ) : (
+              <div className="space-y-3 pr-4">
+                {userSessions.map((session) => (
+                  <div
+                    key={session.id}
+                    className={`p-3 rounded-lg border ${
+                      session.is_active 
+                        ? "border-green-500/30 bg-green-500/5" 
+                        : "border-border bg-card"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <Monitor className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">
+                          {getBrowserFromUserAgent(session.user_agent)}
+                        </span>
+                      </div>
+                      {session.is_active ? (
+                        <Badge className="bg-green-600 text-xs">Active</Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-xs">Ended</Badge>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <LogIn className="w-3 h-3" />
+                        <span>
+                          {format(new Date(session.login_at), "MMM d, yyyy h:mm a")}
+                        </span>
+                      </div>
+                      {session.logout_at && (
+                        <div className="flex items-center gap-1">
+                          <LogOut className="w-3 h-3" />
+                          <span>
+                            {format(new Date(session.logout_at), "MMM d, yyyy h:mm a")}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {formatDistanceToNow(new Date(session.login_at), { addSuffix: true })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSessionsDialogOpen(false)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

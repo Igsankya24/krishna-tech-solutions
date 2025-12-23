@@ -114,14 +114,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
+    
+    // Track session on successful login
+    if (!error && data.user) {
+      try {
+        await supabase.from("sessions").insert({
+          user_id: data.user.id,
+          user_agent: navigator.userAgent,
+        });
+      } catch (sessionError) {
+        console.error("Error tracking session:", sessionError);
+      }
+    }
+    
     return { error: error as Error | null };
   };
 
   const signOut = async () => {
+    // Mark current session as inactive
+    if (user) {
+      try {
+        await supabase
+          .from("sessions")
+          .update({ is_active: false, logout_at: new Date().toISOString() })
+          .eq("user_id", user.id)
+          .eq("is_active", true);
+      } catch (error) {
+        console.error("Error updating session:", error);
+      }
+    }
+    
     await supabase.auth.signOut();
     setIsAdmin(false);
     setIsApproved(false);
