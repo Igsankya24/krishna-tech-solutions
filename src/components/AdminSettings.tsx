@@ -5,16 +5,22 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Settings, Bell, Globe, Shield, Palette } from "lucide-react";
+import { Settings, Bell, Globe, Shield, Palette, Copyright, FileText } from "lucide-react";
 
 const AdminSettings = () => {
   const [siteName, setSiteName] = useState("Krishna Tech Solutions");
   const [siteEmail, setSiteEmail] = useState("info@krishnatech.com");
   const [sitePhone, setSitePhone] = useState("+91 12345 67890");
+  const [copyrightText, setCopyrightText] = useState("© 2024 Krishna Tech Solutions. All rights reserved.");
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [smsNotifications, setSmsNotifications] = useState(false);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [showTerms, setShowTerms] = useState(true);
+  const [termsContent, setTermsContent] = useState(
+    "Welcome to Krishna Tech Solutions. By using our services, you agree to these terms and conditions. We reserve the right to modify these terms at any time."
+  );
 
   const handleSaveGeneral = () => {
     toast.success("General settings saved successfully!");
@@ -22,6 +28,10 @@ const AdminSettings = () => {
 
   const handleSaveNotifications = () => {
     toast.success("Notification settings saved successfully!");
+  };
+
+  const handleSaveLegal = () => {
+    toast.success("Legal settings saved successfully!");
   };
 
   return (
@@ -179,6 +189,79 @@ const AdminSettings = () => {
             <p className="text-sm text-muted-foreground">
               Theme customization options will be available soon.
             </p>
+          </CardContent>
+        </Card>
+
+        {/* Copyright Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Copyright className="w-5 h-5" />
+              Copyright
+            </CardTitle>
+            <CardDescription>
+              Customize footer copyright text
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="copyright">Copyright Text</Label>
+              <Input
+                id="copyright"
+                value={copyrightText}
+                onChange={(e) => setCopyrightText(e.target.value)}
+                placeholder="© 2024 Your Company. All rights reserved."
+              />
+            </div>
+            <Button onClick={handleSaveLegal} className="w-full">
+              Save Copyright
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Terms and Conditions */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              Terms & Conditions
+            </CardTitle>
+            <CardDescription>
+              Manage terms and conditions visibility
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label htmlFor="showTerms">Show Terms & Conditions</Label>
+                <p className="text-sm text-muted-foreground">
+                  Display terms on the website
+                </p>
+              </div>
+              <Switch
+                id="showTerms"
+                checked={showTerms}
+                onCheckedChange={setShowTerms}
+              />
+            </div>
+            {showTerms && (
+              <>
+                <Separator />
+                <div className="space-y-2">
+                  <Label htmlFor="termsContent">Terms Content</Label>
+                  <Textarea
+                    id="termsContent"
+                    value={termsContent}
+                    onChange={(e) => setTermsContent(e.target.value)}
+                    placeholder="Enter your terms and conditions..."
+                    rows={4}
+                  />
+                </div>
+              </>
+            )}
+            <Button onClick={handleSaveLegal} className="w-full">
+              Save Terms Settings
+            </Button>
           </CardContent>
         </Card>
       </div>
