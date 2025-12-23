@@ -31,9 +31,10 @@ const signupSchema = z.object({
 const Auth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, isLoading, signIn, signUp } = useAuth();
+  const { user, isApproved, isLoading, signIn, signUp, signOut } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPendingApproval, setShowPendingApproval] = useState(false);
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -43,9 +44,13 @@ const Auth = () => {
 
   useEffect(() => {
     if (!isLoading && user) {
-      navigate("/admin");
+      if (isApproved) {
+        navigate("/admin");
+      } else {
+        setShowPendingApproval(true);
+      }
     }
-  }, [user, isLoading, navigate]);
+  }, [user, isApproved, isLoading, navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -84,7 +89,7 @@ const Auth = () => {
             title: "Welcome back!",
             description: "You have successfully logged in.",
           });
-          navigate("/admin");
+          // Navigation handled by useEffect based on approval status
         }
       } else {
         const result = signupSchema.safeParse(formData);
@@ -139,6 +144,40 @@ const Auth = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+  // Show pending approval screen if user is logged in but not approved
+  if (showPendingApproval && user && !isApproved) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-6">
+        <div className="max-w-md w-full text-center">
+          <div className="bg-card rounded-3xl p-8 shadow-xl border border-border">
+            <div className="w-20 h-20 rounded-full bg-amber-500/10 flex items-center justify-center mx-auto mb-6">
+              <Shield className="w-10 h-10 text-amber-600" />
+            </div>
+            <h1 className="font-display text-2xl font-bold text-foreground mb-3">
+              Approval Pending
+            </h1>
+            <p className="text-muted-foreground mb-6">
+              Your account is awaiting admin approval. You'll receive access once a super admin approves your request.
+            </p>
+            <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl mb-6">
+              <p className="text-sm text-amber-700">
+                <strong>Logged in as:</strong> {user.email}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => signOut()}
+              className="w-full"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Sign Out & Go Back
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }
