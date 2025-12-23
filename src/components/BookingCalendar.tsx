@@ -4,13 +4,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { CalendarIcon, Clock, CheckCircle, Ticket, X } from "lucide-react";
@@ -22,9 +16,22 @@ interface BookingCalendarProps {
 }
 
 const TIME_SLOTS = [
-  "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
-  "12:00", "12:30", "14:00", "14:30", "15:00", "15:30",
-  "16:00", "16:30", "17:00", "17:30"
+  "09:00",
+  "09:30",
+  "10:00",
+  "10:30",
+  "11:00",
+  "11:30",
+  "12:00",
+  "12:30",
+  "14:00",
+  "14:30",
+  "15:00",
+  "15:30",
+  "16:00",
+  "16:30",
+  "17:00",
+  "17:30",
 ];
 
 interface Service {
@@ -56,7 +63,7 @@ const BookingCalendar = ({ onBookingComplete, onClose }: BookingCalendarProps) =
     email: "",
     phone: "",
     service: "",
-    notes: ""
+    notes: "",
   });
 
   // Fetch active services from database
@@ -67,7 +74,7 @@ const BookingCalendar = ({ onBookingComplete, onClose }: BookingCalendarProps) =
         .select("id, name, price")
         .eq("is_active", true)
         .order("display_order", { ascending: true });
-      
+
       if (data) setServices(data);
     };
 
@@ -76,11 +83,7 @@ const BookingCalendar = ({ onBookingComplete, onClose }: BookingCalendarProps) =
     // Real-time updates for services
     const channel = supabase
       .channel("booking-services")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "services" },
-        () => fetchServices()
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "services" }, () => fetchServices())
       .subscribe();
 
     return () => {
@@ -107,7 +110,7 @@ const BookingCalendar = ({ onBookingComplete, onClose }: BookingCalendarProps) =
       return;
     }
 
-    const slots = data?.map(apt => apt.appointment_time.slice(0, 5)) || [];
+    const slots = data?.map((apt) => apt.appointment_time.slice(0, 5)) || [];
     setBookedSlots(slots);
   };
 
@@ -165,7 +168,7 @@ const BookingCalendar = ({ onBookingComplete, onClose }: BookingCalendarProps) =
   };
 
   const getSelectedServicePrice = () => {
-    const service = services.find(s => s.name === formData.service);
+    const service = services.find((s) => s.name === formData.service);
     return service?.price || 0;
   };
 
@@ -185,7 +188,7 @@ const BookingCalendar = ({ onBookingComplete, onClose }: BookingCalendarProps) =
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields.",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
@@ -194,23 +197,27 @@ const BookingCalendar = ({ onBookingComplete, onClose }: BookingCalendarProps) =
       toast({
         title: "Invalid Email",
         description: "Please enter a valid email address.",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
 
     setIsLoading(true);
 
-    const { data: insertedData, error } = await supabase.from("appointments").insert({
-      appointment_date: format(selectedDate, "yyyy-MM-dd"),
-      appointment_time: selectedTime,
-      user_name: formData.name,
-      user_email: formData.email,
-      user_phone: formData.phone || null,
-      service_type: formData.service || null,
-      notes: formData.notes || null,
-      status: "pending"
-    }).select("id").single();
+    const { data: insertedData, error } = await supabase
+      .from("appointments")
+      .insert({
+        appointment_date: format(selectedDate, "yyyy-MM-dd"),
+        appointment_time: selectedTime,
+        user_name: formData.name,
+        user_email: formData.email,
+        user_phone: formData.phone || null,
+        service_type: formData.service || null,
+        notes: formData.notes || null,
+        status: "pending",
+      })
+      .select("id")
+      .single();
 
     if (error) {
       setIsLoading(false);
@@ -218,7 +225,7 @@ const BookingCalendar = ({ onBookingComplete, onClose }: BookingCalendarProps) =
         toast({
           title: "Slot Unavailable",
           description: "This time slot was just booked. Please select another.",
-          variant: "destructive"
+          variant: "destructive",
         });
         setStep("time");
         fetchBookedSlots(selectedDate);
@@ -226,7 +233,7 @@ const BookingCalendar = ({ onBookingComplete, onClose }: BookingCalendarProps) =
         toast({
           title: "Booking Failed",
           description: "Something went wrong. Please try again.",
-          variant: "destructive"
+          variant: "destructive",
         });
       }
       return;
@@ -275,7 +282,7 @@ const BookingCalendar = ({ onBookingComplete, onClose }: BookingCalendarProps) =
     setStep("success");
     toast({
       title: "Appointment Booked!",
-      description: `Your appointment is scheduled for ${format(selectedDate, "PPP")} at ${selectedTime}.`
+      description: `Your appointment is scheduled for ${format(selectedDate, "PPP")} at ${selectedTime}.`,
     });
     onBookingComplete?.();
   };
@@ -295,10 +302,8 @@ const BookingCalendar = ({ onBookingComplete, onClose }: BookingCalendarProps) =
             mode="single"
             selected={selectedDate}
             onSelect={handleDateSelect}
-            disabled={(date) => 
-              isBefore(date, today) || 
-              isBefore(maxDate, date) ||
-              date.getDay() === 0 // Disable Sundays
+            disabled={
+              (date) => isBefore(date, today) || isBefore(maxDate, date) || date.getDay() === 0 // Disable Sundays
             }
             className={cn("p-3 pointer-events-auto")}
             initialFocus
@@ -317,9 +322,7 @@ const BookingCalendar = ({ onBookingComplete, onClose }: BookingCalendarProps) =
               Change Date
             </Button>
           </div>
-          <p className="text-sm text-muted-foreground">
-            {format(selectedDate, "EEEE, MMMM d, yyyy")}
-          </p>
+          <p className="text-sm text-muted-foreground">{format(selectedDate, "EEEE, MMMM d, yyyy")}</p>
           <div className="grid grid-cols-4 gap-2">
             {TIME_SLOTS.map((time) => {
               const isBooked = bookedSlots.includes(time);
@@ -330,10 +333,7 @@ const BookingCalendar = ({ onBookingComplete, onClose }: BookingCalendarProps) =
                   size="sm"
                   disabled={isBooked}
                   onClick={() => handleTimeSelect(time)}
-                  className={cn(
-                    "text-xs",
-                    isBooked && "opacity-50 cursor-not-allowed line-through"
-                  )}
+                  className={cn("text-xs", isBooked && "opacity-50 cursor-not-allowed line-through")}
                 >
                   {time}
                 </Button>
@@ -354,7 +354,7 @@ const BookingCalendar = ({ onBookingComplete, onClose }: BookingCalendarProps) =
           <p className="text-sm text-muted-foreground">
             {format(selectedDate!, "EEEE, MMMM d")} at {selectedTime}
           </p>
-          
+
           <div className="space-y-3">
             <div>
               <Label htmlFor="name">Name *</Label>
@@ -381,15 +381,12 @@ const BookingCalendar = ({ onBookingComplete, onClose }: BookingCalendarProps) =
                 id="phone"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="+91 98765 43210"
+                placeholder="+91 7026292525"
               />
             </div>
             <div>
               <Label htmlFor="service">Service</Label>
-              <Select
-                value={formData.service}
-                onValueChange={(value) => setFormData({ ...formData, service: value })}
-              >
+              <Select value={formData.service} onValueChange={(value) => setFormData({ ...formData, service: value })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select a service" />
                 </SelectTrigger>
@@ -435,18 +432,12 @@ const BookingCalendar = ({ onBookingComplete, onClose }: BookingCalendarProps) =
                     placeholder="Enter code"
                     className="flex-1 uppercase text-sm"
                   />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleApplyCoupon}
-                  >
+                  <Button variant="outline" size="sm" onClick={handleApplyCoupon}>
                     Apply
                   </Button>
                 </div>
               )}
-              {couponError && (
-                <p className="text-xs text-destructive mt-1">{couponError}</p>
-              )}
+              {couponError && <p className="text-xs text-destructive mt-1">{couponError}</p>}
             </div>
 
             {/* Price Summary */}
@@ -466,9 +457,7 @@ const BookingCalendar = ({ onBookingComplete, onClose }: BookingCalendarProps) =
                     </div>
                     <div className="flex justify-between text-sm text-green-600">
                       <span>Discount ({appliedCoupon.discount_percent}%):</span>
-                      <span>
-                        -₹{(getSelectedServicePrice() - getDiscountedPrice()).toLocaleString()}
-                      </span>
+                      <span>-₹{(getSelectedServicePrice() - getDiscountedPrice()).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between font-semibold pt-1 border-t border-border">
                       <span>Total:</span>
@@ -485,11 +474,7 @@ const BookingCalendar = ({ onBookingComplete, onClose }: BookingCalendarProps) =
             )}
           </div>
 
-          <Button 
-            className="w-full" 
-            onClick={handleSubmit}
-            disabled={isLoading}
-          >
+          <Button className="w-full" onClick={handleSubmit} disabled={isLoading}>
             {isLoading ? "Booking..." : "Confirm Booking"}
           </Button>
         </div>
@@ -508,9 +493,7 @@ const BookingCalendar = ({ onBookingComplete, onClose }: BookingCalendarProps) =
           <p className="text-sm text-muted-foreground">
             {format(selectedDate!, "EEEE, MMMM d, yyyy")} at {selectedTime}
           </p>
-          <p className="text-sm text-muted-foreground">
-            We've sent a confirmation to {formData.email}
-          </p>
+          <p className="text-sm text-muted-foreground">We've sent a confirmation to {formData.email}</p>
           <Button variant="outline" onClick={onClose}>
             Close
           </Button>

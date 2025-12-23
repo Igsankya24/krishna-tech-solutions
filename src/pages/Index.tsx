@@ -27,20 +27,17 @@ const Index = () => {
     {
       icon: RefreshCw,
       title: "Windows Upgrade",
-      description:
-        "Seamless Windows upgrades while keeping all your files, applications, and settings intact.",
+      description: "Seamless Windows upgrades while keeping all your files, applications, and settings intact.",
     },
     {
       icon: KeyRound,
       title: "Password Recovery",
-      description:
-        "Remove or reset Windows passwords without losing any data. Quick and secure solution.",
+      description: "Remove or reset Windows passwords without losing any data. Quick and secure solution.",
     },
     {
       icon: Wrench,
       title: "Computer Repair",
-      description:
-        "Expert hardware and software repairs for laptops and desktops. All brands supported.",
+      description: "Expert hardware and software repairs for laptops and desktops. All brands supported.",
     },
   ];
 
@@ -88,15 +85,14 @@ const Index = () => {
             </div>
 
             <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold text-hero-foreground mb-6 animate-slide-up">
-              Your Data is{" "}
-              <span className="gradient-text">Precious</span>
+              Your Data is <span className="gradient-text">Precious</span>
               <br />
               We Recover It
             </h1>
 
             <p className="text-lg md:text-xl text-hero-foreground/70 max-w-2xl mx-auto mb-10 animate-fade-in">
-              Professional data recovery, Windows services, and computer repairs.
-              Expert solutions with no data loss guarantee.
+              Professional data recovery, Windows services, and computer repairs. Expert solutions with no data loss
+              guarantee.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center animate-slide-up">
@@ -117,9 +113,7 @@ const Index = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mt-20 pt-10 border-t border-hero-foreground/10">
               {stats.map((stat, idx) => (
                 <div key={idx} className="text-center">
-                  <p className="font-display text-3xl md:text-4xl font-bold gradient-text">
-                    {stat.value}
-                  </p>
+                  <p className="font-display text-3xl md:text-4xl font-bold gradient-text">{stat.value}</p>
                   <p className="text-hero-foreground/60 text-sm mt-1">{stat.label}</p>
                 </div>
               ))}
@@ -133,12 +127,10 @@ const Index = () => {
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <span className="text-primary font-medium">Our Services</span>
-            <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mt-2">
-              What We Offer
-            </h2>
+            <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mt-2">What We Offer</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto mt-4">
-              Comprehensive tech solutions for all your computer needs. From data
-              recovery to system upgrades, we've got you covered.
+              Comprehensive tech solutions for all your computer needs. From data recovery to system upgrades, we've got
+              you covered.
             </p>
           </div>
 
@@ -169,9 +161,8 @@ const Index = () => {
                 Trusted by Thousands of Customers
               </h2>
               <p className="text-muted-foreground mb-8">
-                At Krishna Tech Solutions, we combine expertise with cutting-edge
-                technology to deliver exceptional results. Your satisfaction is our
-                mission.
+                At Krishna Tech Solutions, we combine expertise with cutting-edge technology to deliver exceptional
+                results. Your satisfaction is our mission.
               </p>
 
               <div className="space-y-6">
@@ -181,12 +172,8 @@ const Index = () => {
                       <item.icon className="w-6 h-6 text-primary" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-foreground mb-1">
-                        {item.title}
-                      </h3>
-                      <p className="text-muted-foreground text-sm">
-                        {item.description}
-                      </p>
+                      <h3 className="font-semibold text-foreground mb-1">{item.title}</h3>
+                      <p className="text-muted-foreground text-sm">{item.description}</p>
                     </div>
                   </div>
                 ))}
@@ -194,15 +181,13 @@ const Index = () => {
             </div>
 
             <div className="bg-card rounded-3xl p-8 card-shadow border border-border">
-              <h3 className="font-display text-2xl font-bold text-foreground mb-6">
-                Quick Contact
-              </h3>
+              <h3 className="font-display text-2xl font-bold text-foreground mb-6">Quick Contact</h3>
               <div className="space-y-6">
                 <div className="flex items-center gap-4 p-4 rounded-xl bg-muted/50">
                   <Phone className="w-8 h-8 text-primary" />
                   <div>
                     <p className="text-sm text-muted-foreground">Call Us Now</p>
-                    <p className="font-semibold text-foreground">+91 98765 43210</p>
+                    <p className="font-semibold text-foreground">+91 7026292525</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-4 p-4 rounded-xl bg-muted/50">
@@ -238,8 +223,8 @@ const Index = () => {
               <span className="gradient-text">We Can Help!</span>
             </h2>
             <p className="text-hero-foreground/70 text-lg mb-10 max-w-xl mx-auto">
-              Don't panic! Contact us immediately for a free consultation. Our
-              experts are ready to recover your valuable data.
+              Don't panic! Contact us immediately for a free consultation. Our experts are ready to recover your
+              valuable data.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/contact">

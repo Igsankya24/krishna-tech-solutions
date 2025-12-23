@@ -38,7 +38,7 @@ const Chatbot = () => {
         .select("id, name, description, price")
         .eq("is_active", true)
         .order("display_order", { ascending: true });
-      
+
       if (data) setServices(data);
     };
 
@@ -47,11 +47,7 @@ const Chatbot = () => {
     // Real-time updates
     const channel = supabase
       .channel("chatbot-services")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "services" },
-        () => fetchServices()
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "services" }, () => fetchServices())
       .subscribe();
 
     return () => {
@@ -60,10 +56,7 @@ const Chatbot = () => {
   }, []);
 
   // Build quick options from active services (max 3) + Book Appointment
-  const quickOptions = [
-    ...services.slice(0, 3).map(s => s.name),
-    "Book Appointment"
-  ];
+  const quickOptions = [...services.slice(0, 3).map((s) => s.name), "Book Appointment"];
 
   const handleSend = () => {
     if (!input.trim()) return;
@@ -89,7 +82,7 @@ const Chatbot = () => {
           ...prev,
           {
             type: "bot",
-            text: "Thank you for your message! Our team will get back to you shortly. For immediate assistance, please call us at +91 98765 43210.",
+            text: "Thank you for your message! Our team will get back to you shortly. For immediate assistance, please call us at +91 7026292525.",
           },
         ]);
       }, 1000);
@@ -104,20 +97,20 @@ const Chatbot = () => {
     setTimeout(() => {
       let response = "";
       let openCalendar = false;
-      
+
       if (option === "Book Appointment") {
         response = "I'd be happy to help you book an appointment! Please select a date and time:";
         openCalendar = true;
       } else {
         // Find the service from active services
-        const service = services.find(s => s.name === option);
+        const service = services.find((s) => s.name === option);
         if (service) {
           response = `${service.description || service.name}\n\n💰 Price: ₹${service.price.toLocaleString()}\n\nWould you like to book an appointment?`;
         } else {
           response = "How can I assist you further?";
         }
       }
-      
+
       setMessages((prev) => [...prev, { type: "bot", text: response }]);
       if (openCalendar) {
         setShowCalendar(true);
@@ -158,12 +151,8 @@ const Chatbot = () => {
                 <MessageCircle className="w-5 h-5 text-primary-foreground" />
               </div>
               <div>
-                <h4 className="font-semibold text-primary-foreground">
-                  Tech Support
-                </h4>
-                <span className="text-xs text-primary-foreground/80">
-                  Online • Replies instantly
-                </span>
+                <h4 className="font-semibold text-primary-foreground">Tech Support</h4>
+                <span className="text-xs text-primary-foreground/80">Online • Replies instantly</span>
               </div>
             </div>
             <button
@@ -177,10 +166,7 @@ const Chatbot = () => {
           {/* Messages */}
           <div className="h-80 overflow-y-auto p-4 space-y-4 bg-muted/30">
             {messages.map((msg, idx) => (
-              <div
-                key={idx}
-                className={`flex ${msg.type === "user" ? "justify-end" : "justify-start"}`}
-              >
+              <div key={idx} className={`flex ${msg.type === "user" ? "justify-end" : "justify-start"}`}>
                 <div
                   className={`max-w-[80%] p-3 rounded-2xl text-sm whitespace-pre-line ${
                     msg.type === "user"
@@ -197,10 +183,7 @@ const Chatbot = () => {
           {/* Calendar */}
           {showCalendar && (
             <div className="px-4 py-3 border-t border-border bg-muted/30">
-              <BookingCalendar
-                onBookingComplete={handleBookingComplete}
-                onClose={() => setShowCalendar(false)}
-              />
+              <BookingCalendar onBookingComplete={handleBookingComplete} onClose={() => setShowCalendar(false)} />
             </div>
           )}
 
