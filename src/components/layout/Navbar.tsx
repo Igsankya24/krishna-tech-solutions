@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Monitor } from "lucide-react";
+import { Menu, X, Monitor, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  const { user } = useAuth();
 
   const navLinks = [
     { name: "Home", path: "/" },
@@ -55,8 +57,16 @@ const Navbar = () => {
             ))}
           </div>
 
-          {/* CTA Button */}
-          <div className="hidden md:block">
+          {/* CTA Buttons */}
+          <div className="hidden md:flex items-center gap-3">
+            {user && (
+              <Link to="/admin">
+                <Button variant="outline" size="sm">
+                  <Shield className="w-4 h-4" />
+                  Admin
+                </Button>
+              </Link>
+            )}
             <Link to="/contact">
               <Button variant="hero" size="default">
                 Get Support
@@ -92,6 +102,14 @@ const Navbar = () => {
                 {link.name}
               </Link>
             ))}
+            {user && (
+              <Link to="/admin" onClick={() => setIsOpen(false)}>
+                <Button variant="outline" className="w-full">
+                  <Shield className="w-4 h-4" />
+                  Admin Dashboard
+                </Button>
+              </Link>
+            )}
             <Link to="/contact" onClick={() => setIsOpen(false)}>
               <Button variant="hero" className="w-full mt-2">
                 Get Support
