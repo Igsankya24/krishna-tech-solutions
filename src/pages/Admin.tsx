@@ -305,6 +305,11 @@ const Admin = () => {
               ))}
             </div>
 
+            {/* Services Preview on Dashboard */}
+            <div className="mt-8">
+              <AdminServices />
+            </div>
+
             {/* Quick Stats - Now with real data */}
             <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-card rounded-xl p-4 border border-border text-center">

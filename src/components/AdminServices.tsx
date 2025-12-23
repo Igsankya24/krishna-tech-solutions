@@ -12,6 +12,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 
 interface Service {
@@ -74,6 +84,8 @@ const AdminServices = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [serviceToDelete, setServiceToDelete] = useState<Service | null>(null);
   const [newService, setNewService] = useState({
     name: "",
     description: "",
@@ -236,19 +248,30 @@ const AdminServices = () => {
     }
   };
 
-  const handleRemoveService = async (serviceId: string) => {
+  const handleDeleteClick = (service: Service) => {
+    setServiceToDelete(service);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!serviceToDelete) return;
+    
     try {
       const { error } = await supabase
         .from("services")
         .delete()
-        .eq("id", serviceId);
+        .eq("id", serviceToDelete.id);
 
       if (error) throw error;
 
+      setServices(prev => prev.filter(s => s.id !== serviceToDelete.id));
       toast.success("Service removed");
     } catch (error) {
       console.error("Error removing service:", error);
       toast.error("Failed to remove service");
+    } finally {
+      setDeleteDialogOpen(false);
+      setServiceToDelete(null);
     }
   };
 
@@ -428,7 +451,7 @@ const AdminServices = () => {
                   size="icon"
                   variant="ghost"
                   className="h-9 w-9 hover:bg-destructive/10 hover:text-destructive"
-                  onClick={() => handleRemoveService(service.id)}
+                  onClick={() => handleDeleteClick(service)}
                   title="Remove service"
                 >
                   <Minus className="w-4 h-4" />
@@ -504,6 +527,27 @@ const AdminServices = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Service</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{serviceToDelete?.name}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
