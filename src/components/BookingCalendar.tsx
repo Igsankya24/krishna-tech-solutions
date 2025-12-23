@@ -50,6 +50,7 @@ const BookingCalendar = ({ onBookingComplete, onClose }: BookingCalendarProps) =
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
   const [couponInput, setCouponInput] = useState("");
   const [couponError, setCouponError] = useState("");
+  const [bookingId, setBookingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -200,7 +201,7 @@ const BookingCalendar = ({ onBookingComplete, onClose }: BookingCalendarProps) =
 
     setIsLoading(true);
 
-    const { error } = await supabase.from("appointments").insert({
+    const { data: insertedData, error } = await supabase.from("appointments").insert({
       appointment_date: format(selectedDate, "yyyy-MM-dd"),
       appointment_time: selectedTime,
       user_name: formData.name,
@@ -209,7 +210,7 @@ const BookingCalendar = ({ onBookingComplete, onClose }: BookingCalendarProps) =
       service_type: formData.service || null,
       notes: formData.notes || null,
       status: "pending"
-    });
+    }).select("id").single();
 
     if (error) {
       setIsLoading(false);
@@ -231,6 +232,10 @@ const BookingCalendar = ({ onBookingComplete, onClose }: BookingCalendarProps) =
       return;
     }
 
+    const appointmentId = insertedData?.id;
+    const shortBookingId = appointmentId ? appointmentId.split("-")[0].toUpperCase() : null;
+    setBookingId(shortBookingId);
+
     // Send email notification
     try {
       await supabase.functions.invoke("send-booking-notification", {
@@ -241,6 +246,7 @@ const BookingCalendar = ({ onBookingComplete, onClose }: BookingCalendarProps) =
           appointmentDate: format(selectedDate, "EEEE, MMMM d, yyyy"),
           appointmentTime: selectedTime,
           serviceType: formData.service || undefined,
+          bookingId: shortBookingId,
         },
       });
       console.log("Email notification sent successfully");
@@ -493,6 +499,12 @@ const BookingCalendar = ({ onBookingComplete, onClose }: BookingCalendarProps) =
         <div className="text-center py-6 space-y-4">
           <CheckCircle className="w-16 h-16 text-green-500 mx-auto" />
           <h3 className="font-semibold text-lg">Booking Confirmed!</h3>
+          {bookingId && (
+            <div className="bg-primary/10 rounded-lg p-3">
+              <p className="text-xs text-muted-foreground">Your Booking ID</p>
+              <p className="text-xl font-bold text-primary tracking-wider">{bookingId}</p>
+            </div>
+          )}
           <p className="text-sm text-muted-foreground">
             {format(selectedDate!, "EEEE, MMMM d, yyyy")} at {selectedTime}
           </p>

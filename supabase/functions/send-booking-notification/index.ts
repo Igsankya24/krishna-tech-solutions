@@ -16,6 +16,7 @@ interface BookingNotificationRequest {
   appointmentTime: string;
   serviceType?: string;
   notes?: string;
+  bookingId?: string;
 }
 
 const validateEmail = (email: string): boolean => {
@@ -37,9 +38,10 @@ const handler = async (req: Request): Promise<Response> => {
       appointmentTime,
       serviceType,
       notes,
+      bookingId,
     }: BookingNotificationRequest = await req.json();
 
-    console.log("Sending booking notification for:", customerName, appointmentDate, appointmentTime);
+    console.log("Sending booking notification for:", customerName, appointmentDate, appointmentTime, "Booking ID:", bookingId);
     console.log("Customer email:", customerEmail);
 
     // Send notification to admin
@@ -52,11 +54,12 @@ const handler = async (req: Request): Promise<Response> => {
       body: JSON.stringify({
         from: "Krishna Tech Solutions <onboarding@resend.dev>",
         to: [ADMIN_EMAIL],
-        subject: `New Appointment Booking - ${customerName}`,
+        subject: `New Appointment Booking ${bookingId ? `#${bookingId}` : ''} - ${customerName}`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <div style="background: linear-gradient(135deg, #0891b2, #6366f1); padding: 20px; text-align: center;">
               <h1 style="color: white; margin: 0;">New Appointment Booking</h1>
+              ${bookingId ? `<p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 14px;">Booking ID: ${bookingId}</p>` : ''}
             </div>
             <div style="padding: 30px; background: #f8fafc;">
               <h2 style="color: #1e293b; margin-top: 0;">Customer Details</h2>
@@ -119,21 +122,28 @@ const handler = async (req: Request): Promise<Response> => {
         body: JSON.stringify({
           from: "Krishna Tech Solutions <onboarding@resend.dev>",
           to: [customerEmail.trim()],
-          subject: "Appointment Confirmation - Krishna Tech Solutions",
+          subject: `Appointment Confirmation ${bookingId ? `#${bookingId}` : ''} - Krishna Tech Solutions`,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
               <div style="background: linear-gradient(135deg, #0891b2, #6366f1); padding: 20px; text-align: center;">
                 <h1 style="color: white; margin: 0;">Appointment Confirmed!</h1>
+                ${bookingId ? `<p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 14px;">Booking ID: ${bookingId}</p>` : ''}
               </div>
               <div style="padding: 30px; background: #f8fafc;">
                 <p style="color: #1e293b; font-size: 16px;">Dear ${customerName},</p>
                 <p style="color: #64748b;">Thank you for booking an appointment with Krishna Tech Solutions. Here are your appointment details:</p>
+                ${bookingId ? `
+                <div style="background: #0891b2; color: white; text-align: center; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                  <p style="margin: 0; font-size: 12px; opacity: 0.9;">YOUR BOOKING ID</p>
+                  <p style="margin: 5px 0 0 0; font-size: 24px; font-weight: bold; letter-spacing: 2px;">${bookingId}</p>
+                </div>
+                ` : ''}
                 <div style="background: white; border-radius: 8px; padding: 20px; margin: 20px 0; border: 1px solid #e2e8f0;">
                   <p style="margin: 5px 0;"><strong>Date:</strong> ${appointmentDate}</p>
                   <p style="margin: 5px 0;"><strong>Time:</strong> ${appointmentTime}</p>
                   ${serviceType ? `<p style="margin: 5px 0;"><strong>Service:</strong> ${serviceType}</p>` : ''}
                 </div>
-                <p style="color: #64748b;">If you need to reschedule or cancel, please contact us at +91 98765 43210.</p>
+                <p style="color: #64748b;">Please save your Booking ID for reference. If you need to reschedule or cancel, please contact us at +91 98765 43210.</p>
                 <p style="color: #1e293b;">We look forward to seeing you!</p>
                 <p style="color: #1e293b; margin-top: 20px;">Best regards,<br><strong>Krishna Tech Solutions Team</strong></p>
               </div>
