@@ -27,139 +27,14 @@ interface Service {
   display_order: number;
 }
 
-// Default services as fallback
-const defaultServices = [
-  {
-    icon: HardDrive,
-    title: "Data Recovery",
-    description:
-      "Professional data recovery from all types of storage devices. We handle HDDs, SSDs, USB drives, SD cards, and RAID systems.",
-    features: [
-      "Hard Drive Recovery",
-      "SSD Data Recovery",
-      "USB & SD Card Recovery",
-      "RAID Recovery",
-      "Deleted File Recovery",
-    ],
-    price: "₹999",
-  },
-  {
-    icon: RefreshCw,
-    title: "Windows Upgrade",
-    description:
-      "Seamless Windows upgrades from any version to the latest Windows 11. All your files, apps, and settings stay intact.",
-    features: [
-      "Windows 10/11 Upgrade",
-      "Data Preservation",
-      "Application Migration",
-      "Driver Updates",
-      "Performance Optimization",
-    ],
-    price: "₹999",
-  },
-  {
-    icon: KeyRound,
-    title: "Password Recovery",
-    description:
-      "Reset or remove Windows passwords without losing any data. Fast, secure, and reliable service.",
-    features: [
-      "Windows Password Reset",
-      "Admin Account Recovery",
-      "BIOS Password Removal",
-      "No Data Loss",
-      "Same Day Service",
-    ],
-    price: "₹499",
-  },
-  {
-    icon: Wrench,
-    title: "Computer Repair",
-    description:
-      "Expert hardware and software repairs for laptops and desktops. We fix all brands and models.",
-    features: [
-      "Hardware Diagnostics",
-      "Screen Replacement",
-      "Keyboard Repair",
-      "Battery Replacement",
-      "Motherboard Repair",
-    ],
-    price: "₹299",
-  },
-  {
-    icon: Bug,
-    title: "Virus Removal",
-    description:
-      "Complete malware, virus, and spyware removal. We clean your system and install protection.",
-    features: [
-      "Malware Removal",
-      "Ransomware Recovery",
-      "Spyware Cleanup",
-      "Antivirus Installation",
-      "Security Setup",
-    ],
-    price: "₹599",
-  },
-  {
-    icon: Shield,
-    title: "Backup Solutions",
-    description:
-      "Set up automated backup systems to protect your valuable data. Cloud and local options available.",
-    features: [
-      "Cloud Backup Setup",
-      "Local Backup Solutions",
-      "Automated Scheduling",
-      "Data Encryption",
-      "Disaster Recovery Plan",
-    ],
-    price: "₹799",
-  },
-  {
-    icon: Laptop,
-    title: "Software Installation",
-    description:
-      "Professional installation of operating systems and software. Includes configuration and optimization.",
-    features: [
-      "OS Installation",
-      "Office Suite Setup",
-      "Development Tools",
-      "Design Software",
-      "License Activation",
-    ],
-    price: "₹399",
-  },
-  {
-    icon: Server,
-    title: "Network Setup",
-    description:
-      "Home and small office network setup. WiFi configuration, security, and troubleshooting.",
-    features: [
-      "WiFi Setup",
-      "Router Configuration",
-      "Network Security",
-      "Speed Optimization",
-      "Printer Sharing",
-    ],
-    price: "₹699",
-  },
-];
-
 const Services = () => {
   const [dbServices, setDbServices] = useState<Service[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [hasDbServices, setHasDbServices] = useState(false);
 
   useEffect(() => {
     const fetchServices = async () => {
       try {
-        // First check if any services exist in DB (including hidden ones)
-        const { count } = await supabase
-          .from("services")
-          .select("*", { count: "exact", head: true });
-
-        const servicesExistInDb = (count || 0) > 0;
-        setHasDbServices(servicesExistInDb);
-
-        // Then fetch only active services
+        // Fetch only active services from database
         const { data, error } = await supabase
           .from("services")
           .select("*")
@@ -192,16 +67,14 @@ const Services = () => {
     };
   }, []);
 
-  // Only use database services if services exist in DB, otherwise show defaults
-  const displayServices = hasDbServices
-    ? dbServices.map((service) => ({
-        icon: Cpu as LucideIcon,
-        title: service.name,
-        description: service.description || "",
-        features: [],
-        price: `₹${service.price.toLocaleString()}`,
-      }))
-    : defaultServices;
+  // Only show services from database that are active
+  const displayServices = dbServices.map((service) => ({
+    icon: Cpu as LucideIcon,
+    title: service.name,
+    description: service.description || "",
+    features: [],
+    price: `₹${service.price.toLocaleString()}`,
+  }));
 
   return (
     <Layout>
