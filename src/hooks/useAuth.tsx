@@ -6,6 +6,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   isAdmin: boolean;
+  isApproved: boolean;
   isLoading: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
@@ -18,6 +19,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isApproved, setIsApproved] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   const checkAdminRole = async (userId: string) => {
@@ -40,6 +42,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const checkApprovalStatus = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("is_approved")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Error checking approval status:", error);
+        return false;
+      }
+      return data?.is_approved ?? false;
+    } catch (err) {
+      console.error("Error in checkApprovalStatus:", err);
+      return false;
+    }
+  };
+
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -51,9 +72,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (session?.user) {
           setTimeout(() => {
             checkAdminRole(session.user.id).then(setIsAdmin);
+            checkApprovalStatus(session.user.id).then(setIsApproved);
           }, 0);
         } else {
           setIsAdmin(false);
+          setIsApproved(false);
         }
         setIsLoading(false);
       }
@@ -66,6 +89,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       if (session?.user) {
         checkAdminRole(session.user.id).then(setIsAdmin);
+        checkApprovalStatus(session.user.id).then(setIsApproved);
       }
       setIsLoading(false);
     });
@@ -100,11 +124,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signOut = async () => {
     await supabase.auth.signOut();
     setIsAdmin(false);
+    setIsApproved(false);
   };
 
   return (
     <AuthContext.Provider
-      value={{ user, session, isAdmin, isLoading, signUp, signIn, signOut }}
+      value={{ user, session, isAdmin, isApproved, isLoading, signUp, signIn, signOut }}
     >
       {children}
     </AuthContext.Provider>

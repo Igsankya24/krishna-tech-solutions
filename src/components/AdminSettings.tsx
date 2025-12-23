@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,9 +7,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Settings, Bell, Globe, Shield, Palette, Copyright, FileText } from "lucide-react";
+import { Settings, Bell, Globe, Shield, Palette, Copyright, FileText, User } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 const AdminSettings = () => {
+  const { user } = useAuth();
   const [siteName, setSiteName] = useState("Krishna Tech Solutions");
   const [siteEmail, setSiteEmail] = useState("info@krishnatech.com");
   const [sitePhone, setSitePhone] = useState("+91 12345 67890");
@@ -21,6 +24,50 @@ const AdminSettings = () => {
   const [termsContent, setTermsContent] = useState(
     "Welcome to Krishna Tech Solutions. By using our services, you agree to these terms and conditions. We reserve the right to modify these terms at any time."
   );
+
+  // Profile state
+  const [profileName, setProfileName] = useState("");
+  const [profileEmail, setProfileEmail] = useState("");
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      fetchProfile();
+    }
+  }, [user]);
+
+  const fetchProfile = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("profiles")
+      .select("full_name, email")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (data) {
+      setProfileName(data.full_name || "");
+      setProfileEmail(data.email || user.email || "");
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    setIsSavingProfile(true);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ full_name: profileName, email: profileEmail })
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+      toast.success("Profile updated successfully!");
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      toast.error("Failed to update profile");
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
 
   const handleSaveGeneral = () => {
     toast.success("General settings saved successfully!");
@@ -51,6 +98,49 @@ const AdminSettings = () => {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
+        {/* My Profile */}
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="w-5 h-5" />
+              My Profile
+            </CardTitle>
+            <CardDescription>
+              Update your personal information
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="profileName">Full Name</Label>
+                <Input
+                  id="profileName"
+                  value={profileName}
+                  onChange={(e) => setProfileName(e.target.value)}
+                  placeholder="Your name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="profileEmail">Email</Label>
+                <Input
+                  id="profileEmail"
+                  type="email"
+                  value={profileEmail}
+                  onChange={(e) => setProfileEmail(e.target.value)}
+                  placeholder="Your email"
+                />
+              </div>
+            </div>
+            <Button 
+              onClick={handleSaveProfile} 
+              className="mt-4"
+              disabled={isSavingProfile}
+            >
+              {isSavingProfile ? "Saving..." : "Update Profile"}
+            </Button>
+          </CardContent>
+        </Card>
+
         {/* General Settings */}
         <Card>
           <CardHeader>

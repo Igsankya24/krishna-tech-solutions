@@ -33,7 +33,7 @@ const Admin = () => {
   const [stats, setStats] = useState<Stats>({ totalUsers: 0, totalAppointments: 0, pendingAppointments: 0 });
   const [isRefreshing, setIsRefreshing] = useState(false);
   const navigate = useNavigate();
-  const { user, isAdmin, isLoading, signOut } = useAuth();
+  const { user, isAdmin, isApproved, isLoading, signOut } = useAuth();
 
   const fetchStats = useCallback(async () => {
     try {
@@ -231,10 +231,27 @@ const Admin = () => {
               </Link>
             </div>
 
+            {/* Pending Approval Notice */}
+            {!isApproved && !isAdmin && (
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-6 mb-8">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center">
+                    <Shield className="w-6 h-6 text-amber-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-amber-700">Account Pending Approval</h3>
+                    <p className="text-sm text-amber-600">
+                      Your account is awaiting admin approval. You'll have full access once approved.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Admin Notice */}
-            {!isAdmin && (
-              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 mb-8">
-                <p className="text-sm text-yellow-700">
+            {isApproved && !isAdmin && (
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4 mb-8">
+                <p className="text-sm text-blue-700">
                   <strong>Note:</strong> You are logged in as a regular user. Contact
                   an administrator to get admin privileges for full access.
                 </p>
