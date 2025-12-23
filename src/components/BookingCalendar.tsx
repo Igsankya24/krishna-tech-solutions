@@ -144,7 +144,23 @@ const BookingCalendar = ({ onBookingComplete, onClose }: BookingCalendarProps) =
       console.log("Email notification sent successfully");
     } catch (emailError) {
       console.error("Failed to send email notification:", emailError);
-      // Don't fail the booking if email fails
+    }
+
+    // Send SMS notification
+    try {
+      await supabase.functions.invoke("send-sms-notification", {
+        body: {
+          customerName: formData.name,
+          customerEmail: formData.email,
+          customerPhone: formData.phone || undefined,
+          appointmentDate: format(selectedDate, "EEEE, MMMM d, yyyy"),
+          appointmentTime: selectedTime,
+          serviceType: formData.service || undefined,
+        },
+      });
+      console.log("SMS notification sent successfully");
+    } catch (smsError) {
+      console.error("Failed to send SMS notification:", smsError);
     }
 
     setIsLoading(false);
