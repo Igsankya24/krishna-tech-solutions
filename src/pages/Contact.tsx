@@ -4,14 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Phone,
-  Mail,
-  MapPin,
-  Clock,
-  Send,
-  MessageSquare,
-} from "lucide-react";
+import { Phone, Mail, MapPin, Clock, Send, MessageSquare } from "lucide-react";
 
 const Contact = () => {
   const { toast } = useToast();
@@ -24,9 +17,7 @@ const Contact = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
@@ -50,7 +41,7 @@ const Contact = () => {
     {
       icon: Phone,
       title: "Phone",
-      details: ["+91 98765 43210", "+91 12345 67890"],
+      details: ["+91 7026292525"],
     },
     {
       icon: Mail,
@@ -99,8 +90,8 @@ const Contact = () => {
               Get in <span className="gradient-text">Touch</span>
             </h1>
             <p className="text-lg text-hero-foreground/70 max-w-2xl mx-auto">
-              Have a question or need our services? We're here to help! Reach out
-              to us and we'll respond within 24 hours.
+              Have a question or need our services? We're here to help! Reach out to us and we'll respond within 24
+              hours.
             </p>
           </div>
         </div>
@@ -117,21 +108,15 @@ const Contact = () => {
                   <MessageSquare className="w-6 h-6 text-primary-foreground" />
                 </div>
                 <div>
-                  <h2 className="font-display text-2xl font-bold text-foreground">
-                    Send a Message
-                  </h2>
-                  <p className="text-muted-foreground text-sm">
-                    Fill out the form and we'll get back to you
-                  </p>
+                  <h2 className="font-display text-2xl font-bold text-foreground">Send a Message</h2>
+                  <p className="text-muted-foreground text-sm">Fill out the form and we'll get back to you</p>
                 </div>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      Your Name
-                    </label>
+                    <label className="block text-sm font-medium text-foreground mb-2">Your Name</label>
                     <Input
                       name="name"
                       value={formData.name}
@@ -142,9 +127,7 @@ const Contact = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      Phone Number
-                    </label>
+                    <label className="block text-sm font-medium text-foreground mb-2">Phone Number</label>
                     <Input
                       name="phone"
                       value={formData.phone}
@@ -157,9 +140,7 @@ const Contact = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Email Address
-                  </label>
+                  <label className="block text-sm font-medium text-foreground mb-2">Email Address</label>
                   <Input
                     type="email"
                     name="email"
@@ -172,9 +153,7 @@ const Contact = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Service Required
-                  </label>
+                  <label className="block text-sm font-medium text-foreground mb-2">Service Required</label>
                   <select
                     name="service"
                     value={formData.service}
@@ -192,9 +171,7 @@ const Contact = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Your Message
-                  </label>
+                  <label className="block text-sm font-medium text-foreground mb-2">Your Message</label>
                   <Textarea
                     name="message"
                     value={formData.message}
@@ -205,13 +182,7 @@ const Contact = () => {
                   />
                 </div>
 
-                <Button
-                  type="submit"
-                  variant="hero"
-                  size="lg"
-                  className="w-full"
-                  disabled={isSubmitting}
-                >
+                <Button type="submit" variant="hero" size="lg" className="w-full" disabled={isSubmitting}>
                   {isSubmitting ? (
                     "Sending..."
                   ) : (
@@ -227,28 +198,20 @@ const Contact = () => {
             {/* Contact Info */}
             <div className="space-y-8">
               <div>
-                <h2 className="font-display text-2xl font-bold text-foreground mb-4">
-                  Contact Information
-                </h2>
+                <h2 className="font-display text-2xl font-bold text-foreground mb-4">Contact Information</h2>
                 <p className="text-muted-foreground">
-                  Reach out to us through any of these channels. We're always
-                  happy to help!
+                  Reach out to us through any of these channels. We're always happy to help!
                 </p>
               </div>
 
               <div className="grid gap-6">
                 {contactInfo.map((info, idx) => (
-                  <div
-                    key={idx}
-                    className="flex gap-5 p-6 rounded-2xl bg-muted/50 hover:bg-muted transition-colors"
-                  >
+                  <div key={idx} className="flex gap-5 p-6 rounded-2xl bg-muted/50 hover:bg-muted transition-colors">
                     <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
                       <info.icon className="w-6 h-6 text-primary" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-foreground mb-1">
-                        {info.title}
-                      </h3>
+                      <h3 className="font-semibold text-foreground mb-1">{info.title}</h3>
                       {info.details.map((detail, i) => (
                         <p key={i} className="text-muted-foreground text-sm">
                           {detail}
@@ -263,9 +226,7 @@ const Contact = () => {
               <div className="rounded-2xl overflow-hidden border border-border h-64 bg-muted flex items-center justify-center">
                 <div className="text-center">
                   <MapPin className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                  <p className="text-muted-foreground">
-                    Belgaum, Karnataka - 590014
-                  </p>
+                  <p className="text-muted-foreground">Belgaum, Karnataka - 590014</p>
                   <a
                     href="https://maps.google.com/?q=Belgaum+Karnataka+590014"
                     target="_blank"
@@ -286,12 +247,8 @@ const Contact = () => {
         <div className="container mx-auto px-4">
           <div className="bg-gradient-to-r from-primary/10 to-accent/10 rounded-3xl p-8 lg:p-12 flex flex-col lg:flex-row items-center justify-between gap-8">
             <div>
-              <h3 className="font-display text-2xl font-bold text-foreground mb-2">
-                Need Immediate Assistance?
-              </h3>
-              <p className="text-muted-foreground">
-                Call us directly for urgent tech support.
-              </p>
+              <h3 className="font-display text-2xl font-bold text-foreground mb-2">Need Immediate Assistance?</h3>
+              <p className="text-muted-foreground">Call us directly for urgent tech support.</p>
             </div>
             <a href="tel:+919876543210">
               <Button variant="hero" size="lg">
