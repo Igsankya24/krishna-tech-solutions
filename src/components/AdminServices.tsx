@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Minus, Eye, EyeOff } from "lucide-react";
+import { Plus, Minus, Eye, EyeOff, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -27,7 +27,14 @@ const AdminServices = () => {
   const [services, setServices] = useState<Service[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingService, setEditingService] = useState<Service | null>(null);
   const [newService, setNewService] = useState({
+    name: "",
+    description: "",
+    price: "",
+  });
+  const [editForm, setEditForm] = useState({
     name: "",
     description: "",
     price: "",
@@ -89,6 +96,44 @@ const AdminServices = () => {
     } catch (error) {
       console.error("Error adding service:", error);
       toast.error("Failed to add service");
+    }
+  };
+
+  const handleEditClick = (service: Service) => {
+    setEditingService(service);
+    setEditForm({
+      name: service.name,
+      description: service.description || "",
+      price: service.price.toString(),
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateService = async () => {
+    if (!editingService) return;
+    if (!editForm.name.trim()) {
+      toast.error("Service name is required");
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("services")
+        .update({
+          name: editForm.name.trim(),
+          description: editForm.description.trim() || null,
+          price: parseFloat(editForm.price) || 0,
+        })
+        .eq("id", editingService.id);
+
+      if (error) throw error;
+
+      toast.success("Service updated successfully");
+      setIsEditDialogOpen(false);
+      setEditingService(null);
+    } catch (error) {
+      console.error("Error updating service:", error);
+      toast.error("Failed to update service");
     }
   };
 
@@ -231,6 +276,15 @@ const AdminServices = () => {
                   size="icon"
                   variant="ghost"
                   className="h-8 w-8"
+                  onClick={() => handleEditClick(service)}
+                  title="Edit service"
+                >
+                  <Pencil className="w-4 h-4 text-muted-foreground" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8"
                   onClick={() => handleToggleVisibility(service)}
                   title={service.is_active ? "Hide service" : "Show service"}
                 >
@@ -254,6 +308,55 @@ const AdminServices = () => {
           ))}
         </div>
       )}
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Service</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div>
+              <Label htmlFor="edit-name">Service Name</Label>
+              <Input
+                id="edit-name"
+                value={editForm.name}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, name: e.target.value })
+                }
+                placeholder="e.g., Website Development"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-price">Price (₹)</Label>
+              <Input
+                id="edit-price"
+                type="number"
+                value={editForm.price}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, price: e.target.value })
+                }
+                placeholder="e.g., 5000"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-description">Description</Label>
+              <Textarea
+                id="edit-description"
+                value={editForm.description}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, description: e.target.value })
+                }
+                placeholder="Brief description of the service"
+                rows={3}
+              />
+            </div>
+            <Button onClick={handleUpdateService} className="w-full">
+              Update Service
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
