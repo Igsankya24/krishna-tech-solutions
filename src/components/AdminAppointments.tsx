@@ -24,7 +24,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Calendar, Clock, User, Mail, Phone, XCircle, CheckCircle } from "lucide-react";
+import { Calendar, Clock, User, Mail, Phone, XCircle, CheckCircle, CheckCheck, Download } from "lucide-react";
+import * as XLSX from "xlsx";
 
 interface Appointment {
   id: string;
@@ -43,7 +44,7 @@ const AdminAppointments = () => {
   const { user, isAdmin } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [filter, setFilter] = useState<"all" | "pending" | "confirmed" | "cancelled">("all");
+  const [filter, setFilter] = useState<"all" | "pending" | "confirmed" | "cancelled" | "completed">("all");
 
   useEffect(() => {
     fetchAppointments();
@@ -83,7 +84,7 @@ const AdminAppointments = () => {
     setIsLoading(false);
   };
 
-  const handleStatusChange = async (id: string, newStatus: "confirmed" | "cancelled") => {
+  const handleStatusChange = async (id: string, newStatus: "confirmed" | "cancelled" | "completed") => {
     if (!isAdmin) {
       toast({
         title: "Access Denied",
@@ -119,6 +120,39 @@ const AdminAppointments = () => {
     }
   };
 
+  const exportToExcel = () => {
+    const exportData = filteredAppointments.map((apt) => ({
+      "Booking ID": apt.id.split("-")[0].toUpperCase(),
+      "Customer Name": apt.user_name,
+      "Email": apt.user_email,
+      "Phone": apt.user_phone || "N/A",
+      "Date": format(new Date(apt.appointment_date), "MMM d, yyyy"),
+      "Time": apt.appointment_time.slice(0, 5),
+      "Service": apt.service_type || "N/A",
+      "Status": apt.status.charAt(0).toUpperCase() + apt.status.slice(1),
+      "Notes": apt.notes || "",
+      "Created At": format(new Date(apt.created_at), "MMM d, yyyy HH:mm"),
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Appointments");
+
+    // Auto-size columns
+    const colWidths = Object.keys(exportData[0] || {}).map((key) => ({
+      wch: Math.max(key.length, ...exportData.map((row) => String(row[key as keyof typeof row]).length))
+    }));
+    worksheet["!cols"] = colWidths;
+
+    const fileName = `appointments_${format(new Date(), "yyyy-MM-dd")}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+
+    toast({
+      title: "Export Complete",
+      description: `Exported ${exportData.length} appointments to ${fileName}`,
+    });
+  };
+
   const filteredAppointments = appointments.filter(
     (apt) => filter === "all" || apt.status === filter
   );
@@ -131,6 +165,8 @@ const AdminAppointments = () => {
         return <Badge className="bg-green-500">Confirmed</Badge>;
       case "cancelled":
         return <Badge variant="destructive">Cancelled</Badge>;
+      case "completed":
+        return <Badge className="bg-blue-500">Completed</Badge>;
       default:
         return <Badge>{status}</Badge>;
     }
@@ -142,10 +178,10 @@ const AdminAppointments = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <h2 className="text-2xl font-bold">Appointments</h2>
-        <div className="flex gap-2">
-          {(["all", "pending", "confirmed", "cancelled"] as const).map((f) => (
+        <div className="flex gap-2 flex-wrap">
+          {(["all", "pending", "confirmed", "completed", "cancelled"] as const).map((f) => (
             <Button
               key={f}
               variant={filter === f ? "default" : "outline"}
@@ -155,6 +191,16 @@ const AdminAppointments = () => {
               {f.charAt(0).toUpperCase() + f.slice(1)}
             </Button>
           ))}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={exportToExcel}
+            disabled={filteredAppointments.length === 0}
+            className="ml-2"
+          >
+            <Download className="w-4 h-4 mr-1" />
+            Export Excel
+          </Button>
         </div>
       </div>
 
@@ -167,6 +213,7 @@ const AdminAppointments = () => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Booking ID</TableHead>
                 <TableHead>Date & Time</TableHead>
                 <TableHead>Customer</TableHead>
                 <TableHead>Service</TableHead>
@@ -177,6 +224,11 @@ const AdminAppointments = () => {
             <TableBody>
               {filteredAppointments.map((apt) => (
                 <TableRow key={apt.id}>
+                  <TableCell>
+                    <span className="font-mono text-sm font-semibold text-primary">
+                      {apt.id.split("-")[0].toUpperCase()}
+                    </span>
+                  </TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-2">
@@ -250,30 +302,41 @@ const AdminAppointments = () => {
                       </div>
                     )}
                     {apt.status === "confirmed" && isAdmin && (
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button size="sm" variant="destructive">
-                            <XCircle className="w-4 h-4 mr-1" />
-                            Cancel
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Cancel Appointment?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This will cancel the confirmed appointment for {apt.user_name}.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Keep Appointment</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleStatusChange(apt.id, "cancelled")}
-                            >
-                              Cancel Appointment
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                      <div className="flex gap-2 justify-end">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-blue-600 hover:text-blue-700"
+                          onClick={() => handleStatusChange(apt.id, "completed")}
+                        >
+                          <CheckCheck className="w-4 h-4 mr-1" />
+                          Complete
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button size="sm" variant="destructive">
+                              <XCircle className="w-4 h-4 mr-1" />
+                              Cancel
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Cancel Appointment?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will cancel the confirmed appointment for {apt.user_name}.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Keep Appointment</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleStatusChange(apt.id, "cancelled")}
+                              >
+                                Cancel Appointment
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     )}
                   </TableCell>
                 </TableRow>
