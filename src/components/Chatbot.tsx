@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { MessageCircle, X, Send } from "lucide-react";
+import { MessageCircle, X, Send, Ticket, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import BookingCalendar from "@/components/BookingCalendar";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Message {
   type: "bot" | "user";
@@ -18,6 +19,13 @@ interface Service {
   price: number;
 }
 
+interface Coupon {
+  id: string;
+  code: string;
+  name: string;
+  discount_percent: number;
+}
+
 const Chatbot = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
@@ -29,6 +37,9 @@ const Chatbot = () => {
   const [input, setInput] = useState("");
   const [showCalendar, setShowCalendar] = useState(false);
   const [services, setServices] = useState<Service[]>([]);
+  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
+  const [couponInput, setCouponInput] = useState("");
+  const [showCouponInput, setShowCouponInput] = useState(false);
 
   // Fetch active services from database
   useEffect(() => {
@@ -59,11 +70,64 @@ const Chatbot = () => {
     };
   }, []);
 
-  // Build quick options from active services (max 3) + Book Appointment
+  // Build quick options from active services (max 3) + Apply Coupon + Book Appointment
   const quickOptions = [
-    ...services.slice(0, 3).map(s => s.name),
+    ...services.slice(0, 2).map(s => s.name),
+    "Apply Coupon",
     "Book Appointment"
   ];
+
+  const calculateDiscountedPrice = (price: number) => {
+    if (!appliedCoupon) return price;
+    return Math.round(price * (1 - appliedCoupon.discount_percent / 100));
+  };
+
+  const handleApplyCoupon = async () => {
+    if (!couponInput.trim()) {
+      toast.error("Please enter a coupon code");
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from("coupons")
+        .select("id, code, name, discount_percent")
+        .eq("code", couponInput.trim().toUpperCase())
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data) {
+        setAppliedCoupon(data);
+        setMessages((prev) => [
+          ...prev,
+          { type: "user", text: `Applying coupon: ${couponInput.toUpperCase()}` },
+          {
+            type: "bot",
+            text: `🎉 Coupon "${data.name}" applied! You get ${data.discount_percent}% off on all services!`,
+          },
+        ]);
+        toast.success(`Coupon applied: ${data.discount_percent}% off!`);
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          { type: "user", text: `Applying coupon: ${couponInput.toUpperCase()}` },
+          {
+            type: "bot",
+            text: "Sorry, this coupon code is invalid or expired. Please check and try again.",
+          },
+        ]);
+        toast.error("Invalid or expired coupon code");
+      }
+    } catch (error) {
+      console.error("Error applying coupon:", error);
+      toast.error("Failed to apply coupon");
+    }
+
+    setCouponInput("");
+    setShowCouponInput(false);
+  };
 
   const handleSend = () => {
     if (!input.trim()) return;
@@ -99,6 +163,16 @@ const Chatbot = () => {
   };
 
   const handleQuickOption = (option: string) => {
+    if (option === "Apply Coupon") {
+      setShowCouponInput(true);
+      setMessages((prev) => [
+        ...prev,
+        { type: "user", text: option },
+        { type: "bot", text: "Please enter your coupon code below to get a discount on our services!" },
+      ]);
+      return;
+    }
+
     setMessages([...messages, { type: "user", text: option }]);
 
     setTimeout(() => {
@@ -112,7 +186,14 @@ const Chatbot = () => {
         // Find the service from active services
         const service = services.find(s => s.name === option);
         if (service) {
-          response = `${service.description || service.name} Starting at ₹${service.price.toLocaleString()}! Would you like to book an appointment?`;
+          const originalPrice = service.price;
+          const discountedPrice = calculateDiscountedPrice(originalPrice);
+          
+          if (appliedCoupon && discountedPrice < originalPrice) {
+            response = `${service.description || service.name}\n\n💰 Original: ₹${originalPrice.toLocaleString()}\n🎉 With ${appliedCoupon.discount_percent}% off: ₹${discountedPrice.toLocaleString()}\n\nWould you like to book an appointment?`;
+          } else {
+            response = `${service.description || service.name}\n\n💰 Price: ₹${originalPrice.toLocaleString()}\n\nWould you like to book an appointment?`;
+          }
         } else {
           response = "How can I assist you further?";
         }
@@ -204,16 +285,55 @@ const Chatbot = () => {
             </div>
           )}
 
+          {/* Coupon Input */}
+          {showCouponInput && (
+            <div className="px-4 py-3 border-t border-border bg-muted/30">
+              <div className="flex gap-2">
+                <Input
+                  value={couponInput}
+                  onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                  onKeyPress={(e) => e.key === "Enter" && handleApplyCoupon()}
+                  placeholder="Enter coupon code..."
+                  className="flex-1 uppercase"
+                />
+                <Button onClick={handleApplyCoupon} size="sm" variant="default">
+                  <Check className="w-4 h-4 mr-1" />
+                  Apply
+                </Button>
+                <Button onClick={() => setShowCouponInput(false)} size="sm" variant="ghost">
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+              {appliedCoupon && (
+                <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
+                  <Ticket className="w-3 h-3" />
+                  Active: {appliedCoupon.name} (-{appliedCoupon.discount_percent}%)
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Quick Options */}
-          {!showCalendar && (
+          {!showCalendar && !showCouponInput && (
             <div className="px-4 py-3 border-t border-border bg-card">
               <div className="flex flex-wrap gap-2">
+                {appliedCoupon && (
+                  <span className="px-3 py-1.5 text-xs font-medium rounded-full bg-green-500/10 text-green-600 flex items-center gap-1">
+                    <Ticket className="w-3 h-3" />
+                    {appliedCoupon.discount_percent}% OFF
+                  </span>
+                )}
                 {quickOptions.map((option) => (
                   <button
                     key={option}
                     onClick={() => handleQuickOption(option)}
-                    className="px-3 py-1.5 text-xs font-medium rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                    className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
+                      option === "Apply Coupon"
+                        ? "bg-accent/10 text-accent hover:bg-accent/20"
+                        : "bg-primary/10 text-primary hover:bg-primary/20"
+                    }`}
                   >
+                    {option === "Apply Coupon" && <Ticket className="w-3 h-3 inline mr-1" />}
                     {option}
                   </button>
                 ))}

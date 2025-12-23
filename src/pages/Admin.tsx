@@ -16,13 +16,15 @@ import {
   ArrowLeft,
   RefreshCw,
   Wrench,
+  Ticket,
 } from "lucide-react";
 import AdminAppointments from "@/components/AdminAppointments";
 import AdminUsers from "@/components/AdminUsers";
 import AdminSettings from "@/components/AdminSettings";
 import AdminServices from "@/components/AdminServices";
+import AdminCoupons from "@/components/AdminCoupons";
 
-type AdminView = "dashboard" | "appointments" | "users" | "settings" | "services";
+type AdminView = "dashboard" | "appointments" | "users" | "settings" | "services" | "coupons";
 
 interface Stats {
   totalUsers: number;
@@ -174,6 +176,13 @@ const Admin = () => {
       description: "Manage your services",
       color: "from-cyan-500 to-cyan-600",
       view: "services" as AdminView,
+    },
+    {
+      icon: Ticket,
+      title: "Coupons",
+      description: "Manage discount coupons",
+      color: "from-pink-500 to-pink-600",
+      view: "coupons" as AdminView,
     },
     {
       icon: Settings,
@@ -376,6 +385,19 @@ const Admin = () => {
               Back to Dashboard
             </Button>
             <AdminServices />
+          </div>
+        ) : currentView === "coupons" ? (
+          <div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setCurrentView("dashboard")}
+              className="mb-4"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Dashboard
+            </Button>
+            <AdminCoupons />
           </div>
         ) : currentView === "settings" ? (
           <div>
