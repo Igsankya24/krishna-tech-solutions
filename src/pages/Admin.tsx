@@ -68,7 +68,7 @@ const Admin = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [userName, setUserName] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { user, isAdmin, isApproved, isLoading, signOut } = useAuth();
+  const { user, isAdmin, isSuperAdmin, isApproved, isLoading, signOut } = useAuth();
 
   const fetchStats = useCallback(async () => {
     try {
@@ -422,8 +422,8 @@ const Admin = () => {
                   {userName || user.email}
                 </p>
                 <p className="text-xs text-muted-foreground flex items-center gap-1 justify-end">
-                  {isAdmin && <Shield className="w-3 h-3 text-primary" />}
-                  {isAdmin ? "Admin" : "User"}
+                  {(isAdmin || isSuperAdmin) && <Shield className="w-3 h-3 text-primary" />}
+                  {isSuperAdmin ? "Super Admin" : isAdmin ? "Admin" : "User"}
                   {userName && <span className="ml-1">• {user.email}</span>}
                 </p>
               </div>

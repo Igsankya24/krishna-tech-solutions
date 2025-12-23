@@ -7,6 +7,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   isAdmin: boolean;
+  isSuperAdmin: boolean;
   isApproved: boolean;
   isLoading: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
@@ -21,6 +22,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isApproved, setIsApproved] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -29,18 +31,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { data, error } = await supabase
         .from("user_roles")
         .select("role")
-        .eq("user_id", userId)
-        .eq("role", "admin")
-        .maybeSingle();
+        .eq("user_id", userId);
 
       if (error) {
         console.error("Error checking admin role:", error);
-        return false;
+        return { isAdmin: false, isSuperAdmin: false };
       }
-      return !!data;
+      
+      const roles = data?.map(r => r.role) || [];
+      return {
+        isAdmin: roles.includes("admin") || roles.includes("super_admin"),
+        isSuperAdmin: roles.includes("super_admin")
+      };
     } catch (err) {
       console.error("Error in checkAdminRole:", err);
-      return false;
+      return { isAdmin: false, isSuperAdmin: false };
     }
   };
 
@@ -73,11 +78,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Defer admin check with setTimeout to prevent deadlock
         if (session?.user) {
           setTimeout(() => {
-            checkAdminRole(session.user.id).then(setIsAdmin);
+            checkAdminRole(session.user.id).then(({ isAdmin, isSuperAdmin }) => {
+              setIsAdmin(isAdmin);
+              setIsSuperAdmin(isSuperAdmin);
+            });
             checkApprovalStatus(session.user.id).then(setIsApproved);
           }, 0);
         } else {
           setIsAdmin(false);
+          setIsSuperAdmin(false);
           setIsApproved(false);
         }
         setIsLoading(false);
@@ -90,7 +99,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        checkAdminRole(session.user.id).then(setIsAdmin);
+        checkAdminRole(session.user.id).then(({ isAdmin, isSuperAdmin }) => {
+          setIsAdmin(isAdmin);
+          setIsSuperAdmin(isSuperAdmin);
+        });
         checkApprovalStatus(session.user.id).then(setIsApproved);
       }
       setIsLoading(false);
@@ -98,7 +110,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     return () => subscription.unsubscribe();
   }, []);
-
   const signUp = async (email: string, password: string, fullName: string) => {
     const redirectUrl = `${window.location.origin}/`;
     
@@ -152,13 +163,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     await supabase.auth.signOut();
     setIsAdmin(false);
+    setIsSuperAdmin(false);
     setIsApproved(false);
     navigate("/auth");
   };
 
   return (
     <AuthContext.Provider
-      value={{ user, session, isAdmin, isApproved, isLoading, signUp, signIn, signOut }}
+      value={{ user, session, isAdmin, isSuperAdmin, isApproved, isLoading, signUp, signIn, signOut }}
     >
       {children}
     </AuthContext.Provider>
