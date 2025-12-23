@@ -52,10 +52,11 @@ const Admin = () => {
         .from("appointments")
         .select("status");
 
-      // Fetch services count
+      // Fetch active services count
       const { count: serviceCount } = await supabase
         .from("services")
-        .select("*", { count: "exact", head: true });
+        .select("*", { count: "exact", head: true })
+        .eq("is_active", true);
 
       const totalAppointments = appointments?.length || 0;
       const pendingAppointments = appointments?.filter((a) => a.status === "pending").length || 0;
@@ -332,7 +333,7 @@ const Admin = () => {
                 <p className="font-display text-2xl font-bold gradient-text">
                   {stats.totalServices}
                 </p>
-                <p className="text-sm text-muted-foreground">Total Services</p>
+                <p className="text-sm text-muted-foreground">Active Services</p>
               </div>
               <div className="bg-card rounded-xl p-4 border border-border text-center">
                 <p className="font-display text-2xl font-bold gradient-text">
