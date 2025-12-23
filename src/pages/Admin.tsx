@@ -18,8 +18,9 @@ import {
 } from "lucide-react";
 import AdminAppointments from "@/components/AdminAppointments";
 import AdminUsers from "@/components/AdminUsers";
+import AdminSettings from "@/components/AdminSettings";
 
-type AdminView = "dashboard" | "appointments" | "users";
+type AdminView = "dashboard" | "appointments" | "users" | "settings";
 
 interface Stats {
   totalUsers: number;
@@ -153,6 +154,7 @@ const Admin = () => {
       title: "Settings",
       description: "Configure site settings",
       color: "from-gray-500 to-gray-600",
+      view: "settings" as AdminView,
     },
   ];
 
@@ -313,6 +315,19 @@ const Admin = () => {
               Back to Dashboard
             </Button>
             <AdminUsers />
+          </div>
+        ) : currentView === "settings" ? (
+          <div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setCurrentView("dashboard")}
+              className="mb-4"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Dashboard
+            </Button>
+            <AdminSettings />
           </div>
         ) : null}
       </main>
