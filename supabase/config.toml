@@ -1,1 +1,10 @@
 project_id = "dnumqjccsdyrohkzskjd"
+
+[functions.delete-user]
+verify_jwt = false
+
+[functions.send-booking-notification]
+verify_jwt = false
+
+[functions.send-sms-notification]
+verify_jwt = false
