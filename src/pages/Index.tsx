@@ -233,10 +233,10 @@ const Index = () => {
                   <ArrowRight className="w-5 h-5" />
                 </Button>
               </Link>
-              <a href="tel:+919876543210">
+              <a href="tel:+911234567890">
                 <Button variant="heroOutline" size="lg">
                   <Phone className="w-5 h-5" />
-                  Call: +91 98765 43210
+                  Call: +91 7026292525
                 </Button>
               </a>
             </div>
