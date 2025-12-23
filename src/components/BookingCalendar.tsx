@@ -27,14 +27,10 @@ const TIME_SLOTS = [
   "16:00", "16:30", "17:00", "17:30"
 ];
 
-const SERVICES = [
-  "Data Recovery",
-  "Windows Upgrade",
-  "Password Reset",
-  "Hardware Repair",
-  "Software Installation",
-  "General Consultation"
-];
+interface Service {
+  id: string;
+  name: string;
+}
 
 const BookingCalendar = ({ onBookingComplete, onClose }: BookingCalendarProps) => {
   const [step, setStep] = useState<"date" | "time" | "details" | "success">("date");
@@ -42,6 +38,7 @@ const BookingCalendar = ({ onBookingComplete, onClose }: BookingCalendarProps) =
   const [selectedTime, setSelectedTime] = useState<string>();
   const [bookedSlots, setBookedSlots] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [services, setServices] = useState<Service[]>([]);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -49,6 +46,35 @@ const BookingCalendar = ({ onBookingComplete, onClose }: BookingCalendarProps) =
     service: "",
     notes: ""
   });
+
+  // Fetch active services from database
+  useEffect(() => {
+    const fetchServices = async () => {
+      const { data } = await supabase
+        .from("services")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("display_order", { ascending: true });
+      
+      if (data) setServices(data);
+    };
+
+    fetchServices();
+
+    // Real-time updates for services
+    const channel = supabase
+      .channel("booking-services")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "services" },
+        () => fetchServices()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   // Fetch booked slots for selected date
   useEffect(() => {
@@ -286,9 +312,9 @@ const BookingCalendar = ({ onBookingComplete, onClose }: BookingCalendarProps) =
                   <SelectValue placeholder="Select a service" />
                 </SelectTrigger>
                 <SelectContent>
-                  {SERVICES.map((service) => (
-                    <SelectItem key={service} value={service}>
-                      {service}
+                  {services.map((service) => (
+                    <SelectItem key={service.id} value={service.name}>
+                      {service.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
