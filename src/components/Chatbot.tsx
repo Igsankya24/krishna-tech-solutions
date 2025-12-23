@@ -1,13 +1,21 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MessageCircle, X, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import BookingCalendar from "@/components/BookingCalendar";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Message {
   type: "bot" | "user";
   text?: string;
   component?: "calendar";
+}
+
+interface Service {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
 }
 
 const Chatbot = () => {
@@ -20,12 +28,41 @@ const Chatbot = () => {
   ]);
   const [input, setInput] = useState("");
   const [showCalendar, setShowCalendar] = useState(false);
+  const [services, setServices] = useState<Service[]>([]);
 
+  // Fetch active services from database
+  useEffect(() => {
+    const fetchServices = async () => {
+      const { data } = await supabase
+        .from("services")
+        .select("id, name, description, price")
+        .eq("is_active", true)
+        .order("display_order", { ascending: true });
+      
+      if (data) setServices(data);
+    };
+
+    fetchServices();
+
+    // Real-time updates
+    const channel = supabase
+      .channel("chatbot-services")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "services" },
+        () => fetchServices()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // Build quick options from active services (max 3) + Book Appointment
   const quickOptions = [
-    "Data Recovery",
-    "Windows Upgrade",
-    "Password Reset",
-    "Book Appointment",
+    ...services.slice(0, 3).map(s => s.name),
+    "Book Appointment"
   ];
 
   const handleSend = () => {
@@ -68,26 +105,19 @@ const Chatbot = () => {
       let response = "";
       let openCalendar = false;
       
-      switch (option) {
-        case "Data Recovery":
-          response =
-            "We specialize in recovering data from hard drives, SSDs, USB drives, and memory cards. Our success rate is over 95%! Would you like to book an appointment?";
-          break;
-        case "Windows Upgrade":
-          response =
-            "We offer seamless Windows upgrades from any version to Windows 11. Your data and applications remain intact. Starting at ₹999!";
-          break;
-        case "Password Reset":
-          response =
-            "We can reset Windows passwords without any data loss. This service is quick and affordable. Visit us or book an appointment!";
-          break;
-        case "Book Appointment":
-          response = "I'd be happy to help you book an appointment! Please select a date and time:";
-          openCalendar = true;
-          break;
-        default:
+      if (option === "Book Appointment") {
+        response = "I'd be happy to help you book an appointment! Please select a date and time:";
+        openCalendar = true;
+      } else {
+        // Find the service from active services
+        const service = services.find(s => s.name === option);
+        if (service) {
+          response = `${service.description || service.name} Starting at ₹${service.price.toLocaleString()}! Would you like to book an appointment?`;
+        } else {
           response = "How can I assist you further?";
+        }
       }
+      
       setMessages((prev) => [...prev, { type: "bot", text: response }]);
       if (openCalendar) {
         setShowCalendar(true);
