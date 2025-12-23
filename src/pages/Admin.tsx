@@ -133,14 +133,10 @@ const Admin = () => {
     }
   }, []);
 
-  // Calculate unread count from appointments and pending users
+  // Calculate unread count - only pending users count as notifications
   useEffect(() => {
-    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const recentAppointmentCount = recentAppointments.filter(
-      (apt) => new Date(apt.created_at) > oneDayAgo
-    ).length;
-    setUnreadCount(recentAppointmentCount + pendingUsers.length);
-  }, [recentAppointments, pendingUsers]);
+    setUnreadCount(pendingUsers.length);
+  }, [pendingUsers]);
 
   useEffect(() => {
     if (!isLoading && !user) {
