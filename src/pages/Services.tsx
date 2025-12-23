@@ -166,9 +166,23 @@ const Services = () => {
     };
 
     fetchServices();
+
+    // Real-time updates for services
+    const channel = supabase
+      .channel("public-services")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "services" },
+        () => fetchServices()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
-  // Combine database services with default services
+  // Use database services, fall back to defaults only if database is empty
   const displayServices = dbServices.length > 0
     ? dbServices.map((service) => ({
         icon: Cpu as LucideIcon,
