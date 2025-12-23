@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -23,7 +24,16 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { User, Mail, Calendar, Shield, RefreshCw, CheckCircle, XCircle, Clock } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { User, Mail, Calendar, Shield, RefreshCw, CheckCircle, XCircle, Clock, Key, Settings } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Profile {
   id: string;
@@ -40,14 +50,35 @@ interface UserRole {
   role: "admin" | "user";
 }
 
-interface UserWithRole extends Profile {
-  role: "admin" | "user";
+type PermissionType = "read" | "write" | "change_password" | "manage_appointments" | "manage_services";
+
+interface UserPermission {
+  user_id: string;
+  permission: PermissionType;
 }
 
+interface UserWithRole extends Profile {
+  role: "admin" | "user";
+  permissions: PermissionType[];
+}
+
+const PERMISSION_LABELS: Record<PermissionType, string> = {
+  read: "Read Access",
+  write: "Write Access",
+  change_password: "Change Password",
+  manage_appointments: "Manage Appointments",
+  manage_services: "Manage Services",
+};
+
 const AdminUsers = () => {
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
+  const [permissionsDialogOpen, setPermissionsDialogOpen] = useState(false);
+  const [selectedPermissions, setSelectedPermissions] = useState<PermissionType[]>([]);
+  const [isSavingPermissions, setIsSavingPermissions] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -72,9 +103,20 @@ const AdminUsers = () => {
       )
       .subscribe();
 
+    // Subscribe to realtime updates for permissions
+    const permissionsChannel = supabase
+      .channel("permissions-changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "user_permissions" },
+        () => fetchUsers()
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(profilesChannel);
       supabase.removeChannel(rolesChannel);
+      supabase.removeChannel(permissionsChannel);
     };
   }, []);
 
@@ -99,13 +141,30 @@ const AdminUsers = () => {
         throw rolesError;
       }
 
-      // Merge profiles with roles
+      // Fetch permissions
+      const { data: permissions, error: permissionsError } = await supabase
+        .from("user_permissions")
+        .select("user_id, permission");
+
+      if (permissionsError) {
+        console.error("Error fetching permissions:", permissionsError);
+      }
+
+      // Merge profiles with roles and permissions
       const rolesMap = new Map<string, "admin" | "user">();
       roles?.forEach((r: UserRole) => rolesMap.set(r.user_id, r.role));
+
+      const permissionsMap = new Map<string, PermissionType[]>();
+      permissions?.forEach((p: UserPermission) => {
+        const existing = permissionsMap.get(p.user_id) || [];
+        existing.push(p.permission);
+        permissionsMap.set(p.user_id, existing);
+      });
 
       const usersWithRoles: UserWithRole[] = (profiles || []).map((p: Profile) => ({
         ...p,
         role: rolesMap.get(p.user_id) || "user",
+        permissions: permissionsMap.get(p.user_id) || [],
       }));
 
       setUsers(usersWithRoles);
@@ -177,6 +236,64 @@ const AdminUsers = () => {
       title: "Refreshed",
       description: "User data has been updated.",
     });
+  };
+
+  const openPermissionsDialog = (user: UserWithRole) => {
+    setSelectedUser(user);
+    setSelectedPermissions(user.permissions);
+    setPermissionsDialogOpen(true);
+  };
+
+  const handlePermissionToggle = (permission: PermissionType) => {
+    setSelectedPermissions((prev) =>
+      prev.includes(permission)
+        ? prev.filter((p) => p !== permission)
+        : [...prev, permission]
+    );
+  };
+
+  const handleSavePermissions = async () => {
+    if (!selectedUser || !currentUser) return;
+
+    setIsSavingPermissions(true);
+    try {
+      // Delete existing permissions
+      await supabase
+        .from("user_permissions")
+        .delete()
+        .eq("user_id", selectedUser.user_id);
+
+      // Insert new permissions
+      if (selectedPermissions.length > 0) {
+        const permissionsToInsert = selectedPermissions.map((permission) => ({
+          user_id: selectedUser.user_id,
+          permission,
+          granted_by: currentUser.id,
+        }));
+
+        const { error } = await supabase
+          .from("user_permissions")
+          .insert(permissionsToInsert);
+
+        if (error) throw error;
+      }
+
+      toast({
+        title: "Permissions Updated",
+        description: `Permissions for ${selectedUser.full_name || "user"} have been updated.`,
+      });
+      setPermissionsDialogOpen(false);
+      fetchUsers();
+    } catch (error) {
+      console.error("Error saving permissions:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update permissions.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingPermissions(false);
+    }
   };
 
   const pendingUsers = users.filter((u) => !u.is_approved);
@@ -304,6 +421,7 @@ const AdminUsers = () => {
                 <TableHead>User</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
+                <TableHead>Permissions</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Joined</TableHead>
                 <TableHead>Actions</TableHead>
@@ -339,6 +457,24 @@ const AdminUsers = () => {
                     )}
                   </TableCell>
                   <TableCell>
+                    <div className="flex flex-wrap gap-1">
+                      {user.permissions.length === 0 ? (
+                        <span className="text-xs text-muted-foreground">None</span>
+                      ) : (
+                        user.permissions.slice(0, 2).map((p) => (
+                          <Badge key={p} variant="outline" className="text-xs">
+                            {p.replace("_", " ")}
+                          </Badge>
+                        ))
+                      )}
+                      {user.permissions.length > 2 && (
+                        <Badge variant="outline" className="text-xs">
+                          +{user.permissions.length - 2}
+                        </Badge>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
                     {user.is_approved ? (
                       <Badge className="bg-green-600">
                         <CheckCircle className="w-3 h-3 mr-1" />
@@ -358,25 +494,38 @@ const AdminUsers = () => {
                     </div>
                   </TableCell>
                   <TableCell>
-                    {!user.is_approved ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleApprove(user.user_id)}
-                        className="text-green-600 hover:text-green-700"
-                      >
-                        Approve
-                      </Button>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleReject(user.user_id)}
-                        className="text-muted-foreground hover:text-destructive"
-                      >
-                        Revoke
-                      </Button>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {user.is_approved && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openPermissionsDialog(user)}
+                          className="text-primary"
+                        >
+                          <Key className="w-3 h-3 mr-1" />
+                          Permissions
+                        </Button>
+                      )}
+                      {!user.is_approved ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleApprove(user.user_id)}
+                          className="text-green-600 hover:text-green-700"
+                        >
+                          Approve
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleReject(user.user_id)}
+                          className="text-muted-foreground hover:text-destructive"
+                        >
+                          Revoke
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -384,6 +533,46 @@ const AdminUsers = () => {
           </Table>
         </div>
       )}
+
+      {/* Permissions Dialog */}
+      <Dialog open={permissionsDialogOpen} onOpenChange={setPermissionsDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings className="w-5 h-5" />
+              Manage Permissions
+            </DialogTitle>
+            <DialogDescription>
+              Set permissions for {selectedUser?.full_name || "this user"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {(Object.keys(PERMISSION_LABELS) as PermissionType[]).map((permission) => (
+              <div key={permission} className="flex items-center space-x-3">
+                <Checkbox
+                  id={permission}
+                  checked={selectedPermissions.includes(permission)}
+                  onCheckedChange={() => handlePermissionToggle(permission)}
+                />
+                <label
+                  htmlFor={permission}
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                >
+                  {PERMISSION_LABELS[permission]}
+                </label>
+              </div>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPermissionsDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSavePermissions} disabled={isSavingPermissions}>
+              {isSavingPermissions ? "Saving..." : "Save Permissions"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
