@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Monitor, Phone, Mail, MapPin, Facebook, Twitter, Linkedin } from "lucide-react";
+import { Monitor, Phone, Mail, MapPin, Facebook, Twitter, Linkedin, Instagram } from "lucide-react";
 
 const Footer = () => {
   return (
@@ -82,13 +82,13 @@ const Footer = () => {
               </li>
               <li className="flex items-start gap-3">
                 <MapPin className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                <span className="text-hero-foreground/70">123 Tech Street, City Center, India</span>
+                <span className="text-hero-foreground/70">Belgaum, Karnataka - 590014</span>
               </li>
             </ul>
 
             {/* Social Links */}
             <div className="flex gap-4 mt-6">
-              {[Facebook, Twitter, Linkedin].map((Icon, index) => (
+              {[Facebook, Twitter, Instagram, Linkedin].map((Icon, index) => (
                 <a
                   key={index}
                   href="#"
