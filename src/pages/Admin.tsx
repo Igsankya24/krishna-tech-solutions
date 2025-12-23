@@ -197,7 +197,6 @@ const Admin = () => {
 
   const handleSignOut = async () => {
     await signOut();
-    navigate("/");
   };
 
   const handleRefresh = async () => {
@@ -215,6 +214,7 @@ const Admin = () => {
   }
 
   if (!user) {
+    navigate("/auth");
     return null;
   }
 
