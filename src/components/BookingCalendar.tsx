@@ -11,7 +11,7 @@ import { CalendarIcon, Clock, CheckCircle, Ticket, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface BookingCalendarProps {
-  onBookingComplete?: () => void;
+  onBookingComplete?: (bookingId?: string) => void;
   onClose?: () => void;
 }
 
@@ -284,7 +284,7 @@ const BookingCalendar = ({ onBookingComplete, onClose }: BookingCalendarProps) =
       title: "Appointment Booked!",
       description: `Your appointment is scheduled for ${format(selectedDate, "PPP")} at ${selectedTime}.`,
     });
-    onBookingComplete?.();
+    onBookingComplete?.(shortBookingId || undefined);
   };
 
   const today = startOfToday();
