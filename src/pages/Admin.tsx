@@ -238,18 +238,21 @@ const Admin = () => {
     return null;
   }
 
-  const dashboardItems = [
+  // Filter dashboard items based on role - regular users only see appointments
+  const allDashboardItems = [
     {
       icon: BarChart3,
       title: "Overview",
       description: "View site statistics and analytics",
       color: "from-blue-500 to-blue-600",
+      adminOnly: true,
     },
     {
       icon: MessageSquare,
       title: "Messages",
       description: "View customer inquiries",
       color: "from-green-500 to-green-600",
+      adminOnly: true,
     },
     {
       icon: Calendar,
@@ -257,6 +260,7 @@ const Admin = () => {
       description: "Manage service bookings",
       color: "from-purple-500 to-purple-600",
       view: "appointments" as AdminView,
+      adminOnly: false,
     },
     {
       icon: Users,
@@ -264,6 +268,7 @@ const Admin = () => {
       description: "View registered users",
       color: "from-orange-500 to-orange-600",
       view: "users" as AdminView,
+      adminOnly: true,
     },
     {
       icon: Wrench,
@@ -271,6 +276,7 @@ const Admin = () => {
       description: "Manage your services",
       color: "from-cyan-500 to-cyan-600",
       view: "services" as AdminView,
+      adminOnly: true,
     },
     {
       icon: Ticket,
@@ -278,6 +284,7 @@ const Admin = () => {
       description: "Manage discount coupons",
       color: "from-pink-500 to-pink-600",
       view: "coupons" as AdminView,
+      adminOnly: true,
     },
     {
       icon: Settings,
@@ -285,8 +292,14 @@ const Admin = () => {
       description: "Configure site settings",
       color: "from-gray-500 to-gray-600",
       view: "settings" as AdminView,
+      adminOnly: true,
     },
   ];
+
+  // Filter items based on user role
+  const dashboardItems = isAdmin 
+    ? allDashboardItems 
+    : allDashboardItems.filter(item => !item.adminOnly);
 
   return (
     <div className="min-h-screen bg-background">
@@ -560,7 +573,7 @@ const Admin = () => {
             </Button>
             <AdminAppointments />
           </div>
-        ) : currentView === "users" ? (
+        ) : currentView === "users" && isAdmin ? (
           <div>
             <Button
               variant="ghost"
@@ -573,7 +586,7 @@ const Admin = () => {
             </Button>
             <AdminUsers />
           </div>
-        ) : currentView === "services" ? (
+        ) : currentView === "services" && isAdmin ? (
           <div>
             <Button
               variant="ghost"
@@ -586,7 +599,7 @@ const Admin = () => {
             </Button>
             <AdminServices />
           </div>
-        ) : currentView === "coupons" ? (
+        ) : currentView === "coupons" && isAdmin ? (
           <div>
             <Button
               variant="ghost"
@@ -599,7 +612,7 @@ const Admin = () => {
             </Button>
             <AdminCoupons />
           </div>
-        ) : currentView === "settings" ? (
+        ) : currentView === "settings" && isAdmin ? (
           <div>
             <Button
               variant="ghost"
@@ -612,7 +625,19 @@ const Admin = () => {
             </Button>
             <AdminSettings />
           </div>
-        ) : null}
+        ) : (
+          // Redirect non-admins trying to access admin-only views back to dashboard
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">You don't have access to this section.</p>
+            <Button 
+              variant="outline" 
+              className="mt-4"
+              onClick={() => setCurrentView("dashboard")}
+            >
+              Go to Dashboard
+            </Button>
+          </div>
+        )}
       </main>
     </div>
   );
