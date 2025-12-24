@@ -7,6 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -33,7 +40,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { User, Mail, Calendar, Shield, RefreshCw, CheckCircle, XCircle, Clock, Key, Settings, History, Monitor, LogIn, LogOut } from "lucide-react";
+import { User, Mail, Calendar, Shield, RefreshCw, CheckCircle, XCircle, Clock, Key, Settings, History, Monitor, LogIn, LogOut, UserCog } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 interface Profile {
@@ -93,6 +100,10 @@ const AdminUsers = () => {
   const [selectedUserForSessions, setSelectedUserForSessions] = useState<UserWithRole | null>(null);
   const [userSessions, setUserSessions] = useState<Session[]>([]);
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
+  const [roleDialogOpen, setRoleDialogOpen] = useState(false);
+  const [selectedUserForRole, setSelectedUserForRole] = useState<UserWithRole | null>(null);
+  const [selectedRole, setSelectedRole] = useState<"admin" | "user">("user");
+  const [isSavingRole, setIsSavingRole] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -196,18 +207,41 @@ const AdminUsers = () => {
   };
 
   const handleApprove = async (userId: string) => {
+    // Open role dialog to select role before approving
+    const user = users.find(u => u.user_id === userId);
+    if (user) {
+      setSelectedUserForRole(user);
+      setSelectedRole("user");
+      setRoleDialogOpen(true);
+    }
+  };
+
+  const handleApproveWithRole = async () => {
+    if (!selectedUserForRole) return;
+    
+    setIsSavingRole(true);
     try {
-      const { error } = await supabase
+      // Update the user's role
+      const { error: roleError } = await supabase
+        .from("user_roles")
+        .update({ role: selectedRole })
+        .eq("user_id", selectedUserForRole.user_id);
+
+      if (roleError) throw roleError;
+
+      // Approve the user
+      const { error: approveError } = await supabase
         .from("profiles")
         .update({ is_approved: true })
-        .eq("user_id", userId);
+        .eq("user_id", selectedUserForRole.user_id);
 
-      if (error) throw error;
+      if (approveError) throw approveError;
 
       toast({
         title: "User Approved",
-        description: "The user can now access the admin panel.",
+        description: `${selectedUserForRole.full_name || "User"} has been approved as ${selectedRole}.`,
       });
+      setRoleDialogOpen(false);
       fetchUsers();
     } catch (error) {
       console.error("Error approving user:", error);
@@ -216,6 +250,44 @@ const AdminUsers = () => {
         description: "Failed to approve user.",
         variant: "destructive",
       });
+    } finally {
+      setIsSavingRole(false);
+    }
+  };
+
+  const handleChangeRole = async (user: UserWithRole) => {
+    setSelectedUserForRole(user);
+    setSelectedRole(user.role === "super_admin" ? "admin" : user.role);
+    setRoleDialogOpen(true);
+  };
+
+  const handleSaveRole = async () => {
+    if (!selectedUserForRole) return;
+    
+    setIsSavingRole(true);
+    try {
+      const { error } = await supabase
+        .from("user_roles")
+        .update({ role: selectedRole })
+        .eq("user_id", selectedUserForRole.user_id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Role Updated",
+        description: `${selectedUserForRole.full_name || "User"}'s role has been changed to ${selectedRole}.`,
+      });
+      setRoleDialogOpen(false);
+      fetchUsers();
+    } catch (error) {
+      console.error("Error updating role:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update role.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingRole(false);
     }
   };
 
@@ -566,15 +638,28 @@ const AdminUsers = () => {
                         Sessions
                       </Button>
                       {user.is_approved && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openPermissionsDialog(user)}
-                          className="text-primary"
-                        >
-                          <Key className="w-3 h-3 mr-1" />
-                          Permissions
-                        </Button>
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openPermissionsDialog(user)}
+                            className="text-primary"
+                          >
+                            <Key className="w-3 h-3 mr-1" />
+                            Permissions
+                          </Button>
+                          {user.role !== "super_admin" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleChangeRole(user)}
+                              className="text-amber-600 hover:text-amber-700"
+                            >
+                              <UserCog className="w-3 h-3 mr-1" />
+                              Role
+                            </Button>
+                          )}
+                        </>
                       )}
                       {!user.is_approved ? (
                         <Button
@@ -585,7 +670,7 @@ const AdminUsers = () => {
                         >
                           Approve
                         </Button>
-                      ) : (
+                      ) : user.role !== "super_admin" && (
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button
@@ -736,6 +821,81 @@ const AdminUsers = () => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setSessionsDialogOpen(false)}>
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Role Assignment Dialog */}
+      <Dialog open={roleDialogOpen} onOpenChange={setRoleDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserCog className="w-5 h-5" />
+              {selectedUserForRole?.is_approved ? "Change Role" : "Approve & Assign Role"}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedUserForRole?.is_approved 
+                ? `Change role for ${selectedUserForRole?.full_name || "this user"}`
+                : `Assign a role to approve ${selectedUserForRole?.full_name || "this user"}`
+              }
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Select Role</label>
+              <Select value={selectedRole} onValueChange={(value: "admin" | "user") => setSelectedRole(value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="user">
+                    <div className="flex items-center gap-2">
+                      <User className="w-4 h-4" />
+                      <span>User</span>
+                      <span className="text-xs text-muted-foreground ml-2">- Can only view appointments</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="admin">
+                    <div className="flex items-center gap-2">
+                      <Shield className="w-4 h-4" />
+                      <span>Admin</span>
+                      <span className="text-xs text-muted-foreground ml-2">- Full access to all sections</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="bg-muted/50 rounded-lg p-3 text-sm">
+              <p className="font-medium mb-1">Role Permissions:</p>
+              {selectedRole === "user" ? (
+                <ul className="text-muted-foreground list-disc list-inside space-y-1">
+                  <li>View appointments section only</li>
+                  <li>Limited dashboard access</li>
+                </ul>
+              ) : (
+                <ul className="text-muted-foreground list-disc list-inside space-y-1">
+                  <li>Full access to all sections</li>
+                  <li>Manage users, services, coupons</li>
+                  <li>Access to settings</li>
+                </ul>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRoleDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={selectedUserForRole?.is_approved ? handleSaveRole : handleApproveWithRole} 
+              disabled={isSavingRole}
+            >
+              {isSavingRole 
+                ? "Saving..." 
+                : selectedUserForRole?.is_approved 
+                  ? "Save Role" 
+                  : "Approve User"
+              }
             </Button>
           </DialogFooter>
         </DialogContent>
