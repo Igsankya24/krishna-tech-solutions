@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { MessageCircle, X, Send } from "lucide-react";
+import { MessageCircle, X, Send, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import BookingCalendar from "@/components/BookingCalendar";
@@ -29,6 +29,7 @@ const Chatbot = () => {
   const [input, setInput] = useState("");
   const [showCalendar, setShowCalendar] = useState(false);
   const [services, setServices] = useState<Service[]>([]);
+  const [lastBookingId, setLastBookingId] = useState<string | null>(null);
 
   // Fetch active services from database
   useEffect(() => {
@@ -55,8 +56,46 @@ const Chatbot = () => {
     };
   }, []);
 
-  // Build quick options from active services (max 3) + Book Appointment
-  const quickOptions = [...services.slice(0, 3).map((s) => s.name), "Book Appointment"];
+  // Build quick options from active services (max 3) + Book Appointment + Track Status
+  const quickOptions = [...services.slice(0, 2).map((s) => s.name), "Book Appointment", "Track Status"];
+
+  const checkAppointmentStatus = async (bookingId: string) => {
+    const { data, error } = await supabase
+      .from("appointments")
+      .select("id, status, appointment_date, appointment_time, service_type")
+      .ilike("id", `${bookingId.toLowerCase()}%`)
+      .maybeSingle();
+
+    if (error || !data) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          type: "bot",
+          text: `❌ Sorry, I couldn't find any appointment with Booking ID: ${bookingId.toUpperCase()}. Please check the ID and try again.`,
+        },
+      ]);
+      return;
+    }
+
+    const statusEmoji = data.status === "confirmed" ? "✅" : data.status === "completed" ? "🎉" : data.status === "cancelled" ? "❌" : "⏳";
+    const statusText = data.status.charAt(0).toUpperCase() + data.status.slice(1);
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        type: "bot",
+        text: `📋 **Appointment Status**\n\n🆔 Booking ID: ${data.id.split("-")[0].toUpperCase()}\n${statusEmoji} Status: ${statusText}\n📅 Date: ${data.appointment_date}\n⏰ Time: ${data.appointment_time.slice(0, 5)}\n🔧 Service: ${data.service_type || "General"}\n\n${
+          data.status === "pending"
+            ? "Your appointment is awaiting confirmation. We'll notify you soon!"
+            : data.status === "confirmed"
+            ? "Your appointment is confirmed! See you soon!"
+            : data.status === "completed"
+            ? "This appointment has been completed. Thank you for choosing us!"
+            : "This appointment was cancelled."
+        }`,
+      },
+    ]);
+  };
 
   const handleSend = () => {
     if (!input.trim()) return;
@@ -76,6 +115,19 @@ const Chatbot = () => {
         ]);
         setShowCalendar(true);
       }, 500);
+    } else if (lowerInput.includes("track") || lowerInput.includes("status") || lowerInput.includes("check")) {
+      setTimeout(() => {
+        setMessages((prev) => [
+          ...prev,
+          {
+            type: "bot",
+            text: "Please enter your Booking ID to check your appointment status:",
+          },
+        ]);
+      }, 500);
+    } else if (lowerInput.match(/^[a-f0-9]{8}$/i)) {
+      // User entered a booking ID
+      checkAppointmentStatus(input.trim());
     } else {
       setTimeout(() => {
         setMessages((prev) => [
@@ -101,6 +153,13 @@ const Chatbot = () => {
       if (option === "Book Appointment") {
         response = "I'd be happy to help you book an appointment! Please select a date and time:";
         openCalendar = true;
+      } else if (option === "Track Status") {
+        if (lastBookingId) {
+          checkAppointmentStatus(lastBookingId);
+          return;
+        } else {
+          response = "Please enter your Booking ID (e.g., A1B2C3D4) to check your appointment status:";
+        }
       } else {
         // Find the service from active services
         const service = services.find((s) => s.name === option);
@@ -118,13 +177,16 @@ const Chatbot = () => {
     }, 800);
   };
 
-  const handleBookingComplete = () => {
+  const handleBookingComplete = (bookingId?: string) => {
     setShowCalendar(false);
+    if (bookingId) {
+      setLastBookingId(bookingId);
+    }
     setMessages((prev) => [
       ...prev,
       {
         type: "bot",
-        text: "Your appointment has been booked successfully! We look forward to seeing you. Is there anything else I can help you with?",
+        text: `🎉 Your appointment has been booked successfully!\n\n🆔 Your Booking ID: **${bookingId || "N/A"}**\n\n📧 A confirmation has been sent to your email.\n\n💡 You can use "Track Status" anytime to check your appointment status!\n\nIs there anything else I can help you with?`,
       },
     ]);
   };
@@ -195,8 +257,9 @@ const Chatbot = () => {
                   <button
                     key={option}
                     onClick={() => handleQuickOption(option)}
-                    className="px-3 py-1.5 text-xs font-medium rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                    className="px-3 py-1.5 text-xs font-medium rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors flex items-center gap-1"
                   >
+                    {option === "Track Status" && <Search className="w-3 h-3" />}
                     {option}
                   </button>
                 ))}
@@ -210,7 +273,7 @@ const Chatbot = () => {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={(e) => e.key === "Enter" && handleSend()}
-              placeholder="Type your message..."
+              placeholder="Type your message or Booking ID..."
               className="flex-1"
             />
             <Button onClick={handleSend} size="icon" variant="hero">
