@@ -20,6 +20,7 @@ import {
   Bell,
   User,
   UserPlus,
+  Server,
 } from "lucide-react";
 import {
   Popover,
@@ -32,8 +33,9 @@ import AdminUsers from "@/components/AdminUsers";
 import AdminSettings from "@/components/AdminSettings";
 import AdminServices from "@/components/AdminServices";
 import AdminCoupons from "@/components/AdminCoupons";
+import AdminClientDeployment from "@/components/AdminClientDeployment";
 
-type AdminView = "dashboard" | "appointments" | "users" | "settings" | "services" | "coupons";
+type AdminView = "dashboard" | "appointments" | "users" | "settings" | "services" | "coupons" | "client-deployment";
 
 interface Stats {
   totalUsers: number;
@@ -294,12 +296,22 @@ const Admin = () => {
       view: "settings" as AdminView,
       adminOnly: true,
     },
+    {
+      icon: Server,
+      title: "Client Deployment",
+      description: "Deploy to client Supabase",
+      color: "from-indigo-500 to-purple-600",
+      view: "client-deployment" as AdminView,
+      superAdminOnly: true,
+    },
   ];
 
   // Filter items based on user role
-  const dashboardItems = isAdmin 
+  const dashboardItems = isSuperAdmin 
     ? allDashboardItems 
-    : allDashboardItems.filter(item => !item.adminOnly);
+    : isAdmin 
+      ? allDashboardItems.filter(item => !item.superAdminOnly)
+      : allDashboardItems.filter(item => !item.adminOnly && !item.superAdminOnly);
 
   return (
     <div className="min-h-screen bg-background">
@@ -624,6 +636,19 @@ const Admin = () => {
               Back to Dashboard
             </Button>
             <AdminSettings />
+          </div>
+        ) : currentView === "client-deployment" && isSuperAdmin ? (
+          <div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setCurrentView("dashboard")}
+              className="mb-4"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Dashboard
+            </Button>
+            <AdminClientDeployment />
           </div>
         ) : (
           // Redirect non-admins trying to access admin-only views back to dashboard

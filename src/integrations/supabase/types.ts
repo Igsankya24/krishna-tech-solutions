@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          id: string
+          ip_address: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       appointments: {
         Row: {
           appointment_date: string
@@ -59,6 +86,45 @@ export type Database = {
           user_email?: string
           user_name?: string
           user_phone?: string | null
+        }
+        Relationships: []
+      }
+      client_supabase_credentials: {
+        Row: {
+          connection_status: string | null
+          created_at: string
+          db_initialized: boolean | null
+          id: string
+          last_connection_test: string | null
+          last_initialized_at: string | null
+          supabase_anon_key: string
+          supabase_service_role_key_encrypted: string
+          supabase_url: string
+          updated_at: string
+        }
+        Insert: {
+          connection_status?: string | null
+          created_at?: string
+          db_initialized?: boolean | null
+          id?: string
+          last_connection_test?: string | null
+          last_initialized_at?: string | null
+          supabase_anon_key: string
+          supabase_service_role_key_encrypted: string
+          supabase_url: string
+          updated_at?: string
+        }
+        Update: {
+          connection_status?: string | null
+          created_at?: string
+          db_initialized?: boolean | null
+          id?: string
+          last_connection_test?: string | null
+          last_initialized_at?: string | null
+          supabase_anon_key?: string
+          supabase_service_role_key_encrypted?: string
+          supabase_url?: string
+          updated_at?: string
         }
         Relationships: []
       }
