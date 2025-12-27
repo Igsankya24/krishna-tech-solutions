@@ -183,11 +183,20 @@ serve(async (req) => {
           // Test connection to client Supabase
           const clientSupabase = createClient(creds.supabase_url, serviceRoleKey);
           
-          // Test by checking if we can access the database
+          // Test connection by making a simple query
+          // We query a non-existent table - if we get a "table not found" error, connection works
           const { error: testError } = await clientSupabase.from('_test_connection').select('*').limit(1);
           
-          // If error is "relation does not exist", connection is successful (table just doesn't exist)
-          const connectionSuccess = !testError || testError.message.includes('does not exist') || testError.code === '42P01';
+          // Connection is successful if:
+          // - No error
+          // - Error mentions table doesn't exist (various formats)
+          // - Error is about schema cache (means DB is reachable but table doesn't exist)
+          const connectionSuccess = !testError || 
+            testError.message.includes('does not exist') || 
+            testError.message.includes('schema cache') ||
+            testError.message.includes('Could not find') ||
+            testError.code === '42P01' ||
+            testError.code === 'PGRST200';
 
           // Update connection status
           await supabaseAdmin.from('client_supabase_credentials').update({
